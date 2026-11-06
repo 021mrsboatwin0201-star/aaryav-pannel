@@ -59,16 +59,15 @@ def background_worker(task_id, task_data):
                 new_title = f"{nc_text} {current_emoji}"
                 
                 try:
-                    # Instagrapi direct method try karega
+                    # Instagrapi direct method
                     client.direct_thread_update_title(int(thread_id), new_title)
                     add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
                 except Exception as inner_e:
-                    # Fallback private request agar direct method fail ho
                     try:
+                        # Fallback using private_request properly (without 'method' kwarg)
                         client.private_request(
                             f"direct_v2/threads/{thread_id}/update_title/",
-                            data={"title": new_title},
-                            method="POST"
+                            data={"title": new_title}
                         )
                         add_log(f"[NC LOCK (Alt)] @{username} -> Title: {new_title}")
                     except Exception as alt_e:
