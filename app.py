@@ -19,9 +19,8 @@ def add_log(msg):
     if len(LOGS) > 100:
         LOGS.pop()
 
-# Worker logic with dynamic cancellation check
 def background_worker(task_id, task_data):
-    add_log(f"[WORKER] Task {task_id} launched.")
+    add_log(f"[WORKER] Task {task_id} started.")
     task_type = task_data.get('type')
     session_id = task_data.get('session_id')
     username = task_data.get('username')
@@ -35,7 +34,7 @@ def background_worker(task_id, task_data):
 
     client = INSTA_CLIENTS.get(session_id)
     if not client:
-        add_log(f"[ERROR] Session client missing for @{username}")
+        add_log(f"[ERROR] Client session not found for @{username}")
         if task_id in ACTIVE_TASKS:
             ACTIVE_TASKS[task_id]['running'] = False
         return
@@ -45,7 +44,7 @@ def background_worker(task_id, task_data):
             if task_type == 'spam' and payload:
                 msg = payload[idx % len(payload)]
                 client.direct_send(msg, thread_ids=[int(thread_id)])
-                add_log(f"[SPAM SENT] @{username} -> Thread {thread_id}: {msg[:20]}...")
+                add_log(f"[SPAM] @{username} -> Thread {thread_id}: {msg[:25]}...")
                 idx += 1
             elif task_type == 'nclock':
                 current_emoji = emojis[idx % len(emojis)]
@@ -56,10 +55,10 @@ def background_worker(task_id, task_data):
             
             time.sleep(jitter)
         except Exception as e:
-            add_log(f"[ERROR] Task {task_id} (@{username}): {str(e)}")
+            add_log(f"[ERROR] Task {task_id}: {str(e)}")
             time.sleep(5)
 
-    add_log(f"[WORKER] Task {task_id} terminated.")
+    add_log(f"[WORKER] Task {task_id} stopped.")
 
 def self_ping_worker():
     app_url = os.environ.get('RENDER_EXTERNAL_URL')
@@ -97,11 +96,33 @@ def verify_account():
         username = account_info.username
         INSTA_CLIENTS[sessionid] = cl
         
-        add_log(f"[AUTH SUCCESS] @{username} connected.")
+        add_log(f"[AUTH SUCCESS] Account connected: @{username}")
         return jsonify({'status': 'success', 'username': username, 'sessionid': sessionid})
     except Exception as e:
         add_log(f"[AUTH FAILED] {str(e)}")
         return jsonify({'status': 'error', 'message': f'Session error: {str(e)}'}), 400
+
+# Automated Group Creator Endpoint
+@app.route('/api/group/create', methods=['POST'])
+def create_group():
+    data = request.json
+    session_id = data.get('session_id')
+    group_title = data.get('title')
+    usernames = data.get('usernames', []) # List of user IDs or usernames to add
+
+    client = INSTA_CLIENTS.get(session_id)
+    if not client:
+        return jsonify({'status': 'error', 'message': 'Client session not active. Verify account first.'}), 400
+
+    try:
+        # Convert usernames to user PKs if needed, or direct creation
+        user_pks = [str(client.user_id_from_username(u.strip().replace('@', ''))) for u in usernames if u.strip()]
+        thread = client.direct_create_group(user_pks, title=group_title)
+        add_log(f"[GROUP CREATED] Title: '{group_title}' with {len(user_pks)} members.")
+        return jsonify({'status': 'success', 'thread_id': thread.id, 'message': f"Group '{group_title}' created successfully!"})
+    except Exception as e:
+        add_log(f"[GROUP ERROR] Failed to create group: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 400
 
 @app.route('/api/task/start', methods=['POST'])
 def start_task():
@@ -118,8 +139,7 @@ def start_task():
 
     thread = threading.Thread(target=background_worker, args=(task_id, data), daemon=True)
     thread.start()
-    
-    return jsonify({'status': 'success', 'message': f'Task launched: {task_id}', 'task_id': task_id})
+    return jsonify({'status': 'success', 'task_id': task_id})
 
 @app.route('/api/task/stop', methods=['POST'])
 def stop_task():
@@ -127,7 +147,7 @@ def stop_task():
     task_id = data.get('task_id')
     if task_id in ACTIVE_TASKS:
         ACTIVE_TASKS[task_id]['running'] = False
-        return jsonify({'status': 'success', 'message': f'Task {task_id} stopped.'})
+        return jsonify({'status': 'success', 'message': 'Task stopped.'})
     return jsonify({'status': 'error', 'message': 'Task not found'}), 404
 
 @app.route('/api/tasks/active', methods=['GET'])
