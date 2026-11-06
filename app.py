@@ -26,7 +26,7 @@ def background_worker(task_id, task_data):
     username = task_data.get('username')
     thread_id = task_data.get('thread_id')
     
-    # Target name bina '@' ke direct use hoga jaise user ne input diya hai
+    # Target name bina '@' ke direct use hoga jaisa user ne input diya hai
     target_name = task_data.get('target', '').strip()
     jitter = float(task_data.get('jitter', 5.0))
     payload = task_data.get('payload', [])
@@ -42,7 +42,6 @@ def background_worker(task_id, task_data):
     while ACTIVE_TASKS.get(task_id, {}).get('running', False):
         try:
             if task_type == 'spam' and payload:
-                # Agar payload array hai toh usme se current item lo
                 raw_msg = payload[idx % len(payload)]
                 
                 if isinstance(raw_msg, str) and raw_msg.strip():
@@ -58,14 +57,29 @@ def background_worker(task_id, task_data):
                 current_emoji = emojis[idx % len(emojis)]
                 nc_text = task_data.get('nc_text', '')
                 new_title = f"{nc_text} {current_emoji}"
-                client.direct_thread_update_title(int(thread_id), new_title)
-                add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
+                
+                try:
+                    # Instagrapi direct method try karega
+                    client.direct_thread_update_title(int(thread_id), new_title)
+                    add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
+                except Exception as inner_e:
+                    # Fallback private request agar direct method fail ho
+                    try:
+                        client.private_request(
+                            f"direct_v2/threads/{thread_id}/update_title/",
+                            data={"title": new_title},
+                            method="POST"
+                        )
+                        add_log(f"[NC LOCK (Alt)] @{username} -> Title: {new_title}")
+                    except Exception as alt_e:
+                        add_log(f"[NC LOCK ERROR] @{username}: {str(alt_e)}")
+                
                 idx += 1
             
             time.sleep(jitter)
         except Exception as e:
             add_log(f"[ERROR] Task {task_id} (@{username}): {str(e)}")
-            time.sleep(8) # Error aane par thoda wait taaki rate-limit trigger na ho
+            time.sleep(8)
 
     add_log(f"[WORKER] Task {task_id} terminated.")
 
