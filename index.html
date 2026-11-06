@@ -8,84 +8,73 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-[#0a0a0a] text-white font-sans antialiased">
     <div id="root"></div>
 
     <script type="text/babel">
         function App() {
-            // Auth States
-            const [authView, setAuthView] = React.useState('signin'); // 'signin' or 'signup'
+            const [authView, setAuthView] = React.useState('signin');
             const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-            
-            // Credentials Storage State
-            const [regUsername, setRegUsername] = React.useState('');
-            const [regPassword, setRegPassword] = React.useState('');
             const [loginUsername, setLoginUsername] = React.useState('');
             const [loginPassword, setLoginPassword] = React.useState('');
+            const [regUsername, setRegUsername] = React.useState('');
+            const [regPassword, setRegPassword] = React.useState('');
 
-            // Dashboard States
             const [activeTab, setActiveTab] = React.useState('control');
-            const [nodes, setNodes] = React.useState([]); // Instagram session ID nodes
+            const [nodes, setNodes] = React.useState([]);
             const [selectedNodeId, setSelectedNodeId] = React.useState('');
-            
-            // Spam Config
+
             const [targetThread, setTargetThread] = React.useState('');
             const [jitterDelay, setJitterDelay] = React.useState('3.5');
             const [payloadLines, setPayloadLines] = React.useState('');
             const [isSpamming, setIsSpamming] = React.useState(false);
 
-            // NC Lock State
             const [ncText, setNcText] = React.useState('');
             const [ncActive, setNcActive] = React.useState(false);
-            const [selectedNcNodes, setSelectedNcNodes] = React.useState({});
 
-            // Logs
-            const [logs, setLogs] = React.useState([
-                "[SYSTEM] AARYAV PANNEL CORE SECURED.",
-                "[AUTH] Please sign in or register for lifetime access."
-            ]);
+            const [logs, setLogs] = React.useState([]);
 
-            const addLog = (msg) => {
-                const time = new Date().toLocaleTimeString();
-                setLogs(prev => [`[${time}] ${msg}`, ...prev]);
-            };
+            // Sync telemetry logs from backend continuously
+            React.useEffect(() => {
+                if(!isLoggedIn) return;
+                const interval = setInterval(() => {
+                    fetch('/api/logs')
+                        .then(res => res.json())
+                        .then(data => {
+                            if(data.logs) setLogs(data.logs);
+                            if(data.active_tasks) {
+                                if(data.active_tasks['spam_task'] !== undefined) setIsSpamming(data.active_tasks['spam_task']);
+                                if(data.active_tasks['nc_task'] !== undefined) setNcActive(data.active_tasks['nc_task']);
+                            }
+                        })
+                        .catch(() => {});
+                }, 2000);
+                return () => clearInterval(interval);
+            }, [isLoggedIn]);
 
-            // Handle Registration
-            const handleSignUp = (e) => {
-                e.preventDefault();
-                if (!regUsername || !regPassword) {
-                    alert('Please enter both username and password!');
-                    return;
-                }
-                localStorage.setItem('panel_user', regUsername);
-                localStorage.setItem('panel_pass', regPassword);
-                alert('Lifetime access registered successfully! Now please Sign In.');
-                setAuthView('signin');
-            };
-
-            // Handle Sign In
             const handleSignIn = (e) => {
                 e.preventDefault();
                 const savedUser = localStorage.getItem('panel_user');
                 const savedPass = localStorage.getItem('panel_pass');
-
-                if (!savedUser) {
-                    alert('No account found! Please Sign Up first for lifetime access.');
-                    setAuthView('signup');
-                    return;
-                }
-
-                if (loginUsername === savedUser && loginPassword === savedPass) {
+                if (savedUser && loginUsername === savedUser && loginPassword === savedPass) {
                     setIsLoggedIn(true);
-                    addLog(`[AUTH] Welcome back, ${loginUsername}. Panel unlocked.`);
+                } else if (!savedUser) {
+                    alert('No user found! Please Sign Up first.');
                 } else {
-                    alert('Invalid Username or Password!');
+                    alert('Invalid credentials!');
                 }
             };
 
-            // Add Instagram Session ID Node
+            const handleSignUp = (e) => {
+                e.preventDefault();
+                if(!regUsername || !regPassword) return alert('Fill all fields');
+                localStorage.setItem('panel_user', regUsername);
+                localStorage.setItem('panel_pass', regPassword);
+                alert('Account registered! Now Sign In.');
+                setAuthView('signin');
+            };
+
             const handleAddSessionId = () => {
                 const sessionCookie = prompt("Enter Instagram Account Session ID (Cookie):");
                 if (sessionCookie && sessionCookie.trim()) {
@@ -94,231 +83,123 @@
                         id: Date.now().toString(),
                         username: accountName || 'ig_account',
                         sessionid: sessionCookie.trim(),
-                        status: 'ONLINE',
-                        dispatched: 0
+                        status: 'ONLINE'
                     };
                     setNodes(prev => [...prev, newNode]);
-                    setSelectedNcNodes(prev => ({ ...prev, [newNode.id]: true }));
                     if(!selectedNodeId) setSelectedNodeId(newNode.id);
-                    addLog(`[NODE] Successfully added IG Session ID for @${newNode.username}`);
                 }
+            };
+
+            const toggleSpam = () => {
+                if(nodes.length === 0) return alert('Add IG Session ID first!');
+                if(!targetThread || !payloadLines) return alert('Fill thread ID and payload lines!');
+
+                const endpoint = isSpamming ? '/api/task/stop' : '/api/task/start';
+                const payload = {
+                    task_id: 'spam_task',
+                    type: 'spam',
+                    sessions: nodes,
+                    thread_id: targetThread,
+                    jitter: jitterDelay,
+                    payload: payloadLines.split('\n').filter(x => x.trim())
+                };
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                }).then(res => res.json()).then(data => {
+                    setIsSpamming(!isSpamming);
+                });
+            };
+
+            const toggleNcLock = () => {
+                if(nodes.length === 0) return alert('Add IG Session ID first!');
+                if(!ncText) return alert('Fill group title base!');
+
+                const endpoint = ncActive ? '/api/task/stop' : '/api/task/start';
+                const payload = {
+                    task_id: 'nc_task',
+                    type: 'nclock',
+                    sessions: nodes,
+                    jitter: jitterDelay,
+                    nc_text: ncText
+                };
+
+                fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                }).then(res => res.json()).then(data => {
+                    setNcActive(!ncActive);
+                });
             };
 
             return (
                 <div className="min-h-screen bg-[#0a0a0a] text-white p-4 flex flex-col">
                     {!isLoggedIn ? (
-                        /* LOGIN / SIGNUP SCREEN */
                         <div className="flex-1 flex items-center justify-center">
                             <div className="bg-[#141414] border border-red-900/60 p-6 rounded-2xl w-full max-w-md shadow-[0_0_30px_rgba(255,0,60,0.2)]">
                                 <div className="text-center mb-6">
-                                    <h1 className="text-xl font-black tracking-wider text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
-                                    <p className="text-xs text-neutral-400 mt-1">Owner: <span className="text-red-400 font-bold">@Abusivegang</span></p>
+                                    <h1 className="text-xl font-black text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
+                                    <p className="text-xs text-neutral-400">Owner: @Abusivegang</p>
                                 </div>
-
                                 {authView === 'signin' ? (
                                     <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs font-semibold text-neutral-300">Panel Username</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Enter your username" 
-                                                value={loginUsername} 
-                                                onChange={(e) => setLoginUsername(e.target.value)} 
-                                                className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white focus:border-red-600 outline-none"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs font-semibold text-neutral-300">Panel Password</label>
-                                            <input 
-                                                type="password" 
-                                                placeholder="Enter your password" 
-                                                value={loginPassword} 
-                                                onChange={(e) => setLoginPassword(e.target.value)} 
-                                                className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white focus:border-red-600 outline-none"
-                                            />
-                                        </div>
-                                        <button type="submit" className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded transition shadow-[0_0_15px_rgba(255,0,60,0.4)]">
-                                            Sign In
-                                        </button>
-                                        <div className="text-center mt-2">
-                                            <span className="text-xs text-neutral-400">Don't have lifetime access? </span>
-                                            <button type="button" onClick={() => setAuthView('signup')} className="text-xs text-red-500 font-bold hover:underline">Sign Up</button>
-                                        </div>
+                                        <input type="text" placeholder="Username" value={loginUsername} onChange={e=>setLoginUsername(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
+                                        <input type="password" placeholder="Password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
+                                        <button type="submit" className="py-3 bg-red-600 font-bold text-xs uppercase rounded">Sign In</button>
+                                        <div className="text-center text-xs"><button type="button" onClick={()=>setAuthView('signup')} className="text-red-500 font-bold">Sign Up for Lifetime Access</button></div>
                                     </form>
                                 ) : (
                                     <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-                                        <div className="text-center bg-red-950/30 border border-red-900/40 p-2 rounded text-[11px] text-red-400">
-                                            Register for Lifetime Panel Access
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs font-semibold text-neutral-300">Choose Username</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="Choose a username" 
-                                                value={regUsername} 
-                                                onChange={(e) => setRegUsername(e.target.value)} 
-                                                className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white focus:border-red-600 outline-none"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs font-semibold text-neutral-300">Choose Password</label>
-                                            <input 
-                                                type="password" 
-                                                placeholder="Choose a secure password" 
-                                                value={regPassword} 
-                                                onChange={(e) => setRegPassword(e.target.value)} 
-                                                className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white focus:border-red-600 outline-none"
-                                            />
-                                        </div>
-                                        <button type="submit" className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider rounded transition shadow-[0_0_15px_rgba(255,0,60,0.4)]">
-                                            Register for Lifetime Access
-                                        </button>
-                                        <div className="text-center mt-2">
-                                            <span className="text-xs text-neutral-400">Already registered? </span>
-                                            <button type="button" onClick={() => setAuthView('signin')} className="text-xs text-red-500 font-bold hover:underline">Sign In</button>
-                                        </div>
+                                        <input type="text" placeholder="Choose Username" value={regUsername} onChange={e=>setRegUsername(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
+                                        <input type="password" placeholder="Choose Password" value={regPassword} onChange={e=>setRegPassword(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
+                                        <button type="submit" className="py-3 bg-red-600 font-bold text-xs uppercase rounded">Register Account</button>
+                                        <div className="text-center text-xs"><button type="button" onClick={()=>setAuthView('signin')} className="text-red-500 font-bold">Back to Sign In</button></div>
                                     </form>
                                 )}
                             </div>
                         </div>
                     ) : (
-                        /* MAIN DASHBOARD */
                         <div className="flex flex-col flex-1 gap-4">
-                            {/* Header */}
-                            <header className="border-b border-red-900/60 pb-4 flex flex-col md:flex-row justify-between items-center gap-4 bg-[#141414] p-4 rounded-xl shadow-[0_0_20px_rgba(255,0,60,0.15)]">
+                            <header className="border-b border-red-900/60 pb-4 flex justify-between items-center bg-[#141414] p-4 rounded-xl">
                                 <div>
-                                    <h1 className="text-2xl font-black tracking-wider text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
-                                    <p className="text-xs text-neutral-400">Operator: <span className="text-red-400 font-bold">{loginUsername}</span> | Active IG Nodes: {nodes.length}</p>
+                                    <h1 className="text-2xl font-black text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
+                                    <p className="text-xs text-neutral-400">Status: <span className="text-emerald-500 font-bold">SERVER BACKGROUND WORKER ACTIVE</span></p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className="flex bg-[#0a0a0a] p-1.5 rounded-lg border border-red-900/40">
-                                        <button onClick={() => setActiveTab('control')} className={`px-4 py-2 rounded font-bold text-xs transition ${activeTab === 'control' ? 'bg-red-600 text-white shadow-[0_0_10px_#ff003c]' : 'text-neutral-400 hover:text-white'}`}>Control Center</button>
-                                        <button onClick={() => setActiveTab('matrix')} className={`px-4 py-2 rounded font-bold text-xs transition ${activeTab === 'matrix' ? 'bg-red-600 text-white shadow-[0_0_10px_#ff003c]' : 'text-neutral-400 hover:text-white'}`}>Nodes Matrix</button>
-                                    </div>
-                                    <button onClick={handleAddSessionId} className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-xs font-bold transition shadow-[0_0_10px_rgba(255,0,60,0.4)]">+ Add ID</button>
-                                    <button onClick={() => setIsLoggedIn(false)} className="bg-neutral-900 border border-neutral-800 text-neutral-400 px-3 py-2 rounded text-xs hover:text-white">Logout</button>
+                                    <button onClick={handleAddSessionId} className="bg-red-600 text-white px-3 py-2 rounded text-xs font-bold">+ Add ID</button>
+                                    <button onClick={()=>setIsLoggedIn(false)} className="bg-neutral-900 text-neutral-400 px-3 py-2 rounded text-xs">Logout</button>
                                 </div>
                             </header>
 
-                            {/* Views */}
-                            {activeTab === 'control' ? (
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
-                                    {/* Left Panel: Spam Config */}
-                                    <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-4 shadow-xl">
-                                        <h2 className="text-sm font-bold text-red-500 uppercase tracking-widest border-b border-red-950 pb-2">Spam Campaign Config</h2>
-                                        
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs text-neutral-400 font-semibold">Select Instagram Sender Node</label>
-                                            <select value={selectedNodeId} onChange={(e) => setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-white focus:border-red-600 outline-none">
-                                                {nodes.length === 0 ? (
-                                                    <option value="">No IG IDs added yet (Click + Add ID)</option>
-                                                ) : (
-                                                    nodes.map(n => (
-                                                        <option key={n.id} value={n.id}>@{n.username}</option>
-                                                    ))
-                                                )}
-                                            </select>
-                                        </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
+                                <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
+                                    <h2 className="text-sm font-bold text-red-500 uppercase">Spam Campaign Config</h2>
+                                    <input type="text" placeholder="Target GC Thread ID" value={targetThread} onChange={e=>setTargetThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                    <input type="text" placeholder="Jitter Delay (Sec)" value={jitterDelay} onChange={e=>setJitterDelay(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                    <textarea rows="4" placeholder="Payload lines..." value={payloadLines} onChange={e=>setPayloadLines(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none resize-none"></textarea>
+                                    <button onClick={toggleSpam} className={`py-3 rounded font-bold text-xs uppercase ${isSpamming ? 'bg-red-950 text-red-500 border border-red-600 animate-pulse' : 'bg-red-600 text-white'}`}>
+                                        {isSpamming ? 'HALT BACKGROUND SPAM' : 'LAUNCH BACKGROUND SPAM'}
+                                    </button>
+                                </div>
 
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs text-neutral-400 font-semibold">Target GC Thread ID / URL</label>
-                                            <input type="text" placeholder="Enter Thread ID..." value={targetThread} onChange={(e) => setTargetThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-white focus:border-red-600 outline-none" />
-                                        </div>
-
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs text-neutral-400 font-semibold">Jitter Delay Pacing (Seconds)</label>
-                                            <input type="text" value={jitterDelay} onChange={(e) => setJitterDelay(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-white focus:border-red-600 outline-none" />
-                                        </div>
-
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs text-neutral-400 font-semibold">Spam Payload Messages (One per line)</label>
-                                            <textarea rows="4" placeholder="Enter spam lines here..." value={payloadLines} onChange={(e) => setPayloadLines(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-white focus:border-red-600 outline-none resize-none"></textarea>
-                                        </div>
-
-                                        <button onClick={() => {
-                                            if(nodes.length === 0) { alert('Please add at least one Instagram Session ID via "+ Add ID" button!'); return; }
-                                            if(!targetThread || !payloadLines) { alert('Please fill target thread and payload lines!'); return; }
-                                            setIsSpamming(!isSpamming);
-                                            addLog(isSpamming ? `[SPAM] Campaign halted.` : `[SPAM] Campaign launched on target GC with jitter ${jitterDelay}s.`);
-                                        }} className={`w-full py-3 rounded font-bold text-sm tracking-wider uppercase transition ${isSpamming ? 'bg-neutral-900 border border-red-600 text-red-500 animate-pulse' : 'bg-red-600 hover:bg-red-700 text-white shadow-[0_0_15px_rgba(255,0,60,0.4)]'}`}>
-                                            {isSpamming ? 'HALT SPAM CAMPAIGN' : 'LAUNCH SPAM CAMPAIGN'}
+                                <div className="lg:col-span-2 flex flex-col gap-4">
+                                    <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
+                                        <h2 className="text-sm font-bold text-red-500 uppercase">Group Name Protection (NC Lock)</h2>
+                                        <input type="text" placeholder="Protected Title Base" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                        <button onClick={toggleNcLock} className={`py-2.5 rounded font-bold text-xs uppercase ${ncActive ? 'bg-red-900 text-white' : 'bg-neutral-800 text-red-400'}`}>
+                                            {ncActive ? 'DISABLE BACKGROUND NC LOCK' : 'ENABLE BACKGROUND NC LOCK'}
                                         </button>
                                     </div>
 
-                                    {/* Right Panel: NC Lock & Telemetry */}
-                                    <div className="lg:col-span-2 flex flex-col gap-4">
-                                        <div className="bg-[#141414] border border-red-950 p-4 rounded-xl shadow-xl">
-                                            <h2 className="text-sm font-bold text-red-500 uppercase tracking-widest border-b border-red-950 pb-2 mb-3">Group Name Protection (NC Lock)</h2>
-                                            
-                                            <div className="flex flex-col gap-3">
-                                                <div>
-                                                    <label className="text-xs text-neutral-400 font-semibold block mb-1">Select Active IG IDs for NC Lock Rotation</label>
-                                                    <div className="flex flex-wrap gap-3">
-                                                        {nodes.length === 0 ? (
-                                                            <span className="text-xs text-neutral-500">No IDs available. Click "+ Add ID" on top.</span>
-                                                        ) : (
-                                                            nodes.map(n => (
-                                                                <label key={n.id} className="flex items-center gap-2 text-xs cursor-pointer bg-black/40 px-3 py-1.5 rounded border border-neutral-800">
-                                                                    <input type="checkbox" checked={selectedNcNodes[n.id] || false} onChange={(e) => setSelectedNcNodes({...selectedNcNodes, [n.id]: e.target.checked})} className="accent-red-600" /> @{n.username}
-                                                                </label>
-                                                            ))
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex flex-col gap-1.5">
-                                                    <label className="text-xs text-neutral-400 font-semibold">Protected Group Title Base</label>
-                                                    <input type="text" placeholder="e.g. AARYAV SQUAD 👑" value={ncText} onChange={(e) => setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-white focus:border-red-600 outline-none" />
-                                                    <p className="text-[10px] text-neutral-500">Auto-rotating suffix emojis will cycle: 💕, 🔥, ✨, 👑, ⚡, 😈</p>
-                                                </div>
-
-                                                <button onClick={() => {
-                                                    if(nodes.length === 0) { alert('Add an IG Session ID first!'); return; }
-                                                    if(!ncText) { alert('Enter protected group title base!'); return; }
-                                                    setNcActive(!ncActive);
-                                                    addLog(ncActive ? `[NC LOCK] Disabled.` : `[NC LOCK] Activated auto-rotating emoji title loop.`);
-                                                }} className={`py-2.5 rounded font-bold text-xs uppercase tracking-wider transition ${ncActive ? 'bg-red-900 text-white' : 'bg-neutral-800 hover:bg-neutral-700 text-red-400 border border-red-900/50'}`}>
-                                                    {ncActive ? 'Disable NC Lock' : 'Activate NC Lock'}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Terminal Telemetry Logs */}
-                                        <div className="bg-black border border-red-950 p-3 rounded-xl flex-1 font-mono text-[11px] h-52 overflow-y-auto text-red-500 shadow-inner flex flex-col-reverse">
-                                            <div className="flex flex-col gap-1">
-                                                {logs.map((lg, idx) => (
-                                                    <div key={idx}>{lg}</div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                    <div className="bg-black border border-red-950 p-3 rounded-xl flex-1 font-mono text-[11px] h-52 overflow-y-auto text-red-500 shadow-inner flex flex-col">
+                                        <div className="text-neutral-600 border-b border-neutral-900 pb-1 mb-1">[LIVE SERVER LOGS - PERSISTENT BACKGROUND TASK]</div>
+                                        {logs.map((lg, i) => <div key={i}>{lg}</div>)}
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex-1">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h2 className="text-sm font-bold text-red-500 uppercase tracking-widest">Active Instagram Nodes Matrix ({nodes.length})</h2>
-                                        <button onClick={handleAddSessionId} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-bold transition">+ Add ID</button>
-                                    </div>
-                                    {nodes.length === 0 ? (
-                                        <div className="text-center py-10 text-neutral-500 text-xs border border-dashed border-neutral-800 rounded-lg">
-                                            No Instagram accounts added yet. Click "+ Add ID" to add session ID cookies.
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {nodes.map(n => (
-                                                <div key={n.id} className="bg-black border border-neutral-800 p-4 rounded-lg flex flex-col gap-2">
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="font-bold text-red-400 text-sm">@{n.username}</span>
-                                                        <span className="text-[10px] bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800">{n.status}</span>
-                                                    </div>
-                                                    <div className="text-xs text-neutral-400">Session ID: <span className="text-neutral-500 font-mono">{n.sessionid.substring(0, 20)}...</span></div>
-                                                    <button onClick={() => setNodes(nodes.filter(x => x.id !== n.id))} className="mt-2 self-start text-[10px] text-red-500 hover:text-red-400 border border-red-950 px-2 py-1 rounded">Remove ID</button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            </div>
                         </div>
                     )}
                 </div>
