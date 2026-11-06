@@ -1,13 +1,13 @@
 import os
 import time
 import threading
-from flask import Flask, request, jsonify, render_template_string
+import urllib.request
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# Global task state management
 ACTIVE_TASKS = {}
 LOGS = []
 
@@ -17,7 +17,7 @@ def add_log(msg):
     if len(LOGS) > 100:
         LOGS.pop()
 
-# Background Thread Worker for Spam / NC Lock
+# Background Worker for Spam / NC Lock
 def background_worker(task_id, task_data):
     add_log(f"[WORKER] Task {task_id} started in background loop.")
     task_type = task_data.get('type')
@@ -35,7 +35,6 @@ def background_worker(task_id, task_data):
             if task_type == 'spam':
                 msg = payload[idx % len(payload)]
                 for session in sessions:
-                    # Yahan instagrapi ya requests ka actual dispatch call hota hai
                     add_log(f"[SPAM DISPATCH] Node @{session['username']} -> Thread {thread_id}: {msg}")
                 idx += 1
             elif task_type == 'nclock':
@@ -52,10 +51,28 @@ def background_worker(task_id, task_data):
 
     add_log(f"[WORKER] Task {task_id} stopped.")
 
+# Self-Ping Heartbeat to prevent Render Free Tier from sleeping
+def self_ping_worker():
+    # Render automatically sets RENDER_EXTERNAL_URL environment variable
+    app_url = os.environ.get('RENDER_EXTERNAL_URL')
+    if not app_url:
+        return
+    
+    add_log(f"[HEARTBEAT] Self-ping active for URL: {app_url}")
+    while True:
+        try:
+            time.sleep(300) # Har 5 minute me ping karega
+            urllib.request.urlopen(app_url)
+        except Exception:
+            pass
+
 @app.route('/')
 def home():
-    with open('index.html', 'r', encoding='utf-8') as f:
-        return f.read()
+    try:
+        with open('index.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        return f"Error loading interface: {str(e)}"
 
 @app.route('/api/task/start', methods=['POST'])
 def start_task():
@@ -85,4 +102,9 @@ def get_logs():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    
+    # Start heartbeat thread in background
+    heartbeat_thread = threading.Thread(target=self_ping_worker, daemon=True)
+    heartbeat_thread.start()
+    
     app.run(host='0.0.0.0', port=port)
