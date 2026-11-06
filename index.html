@@ -3,48 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AARYAV PANNEL SPAM IG</title>
+    <title>AARYAV PANNEL - Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-[#0a0a0a] text-white font-sans antialiased">
+<body class="bg-[#070707] text-white font-sans antialiased overflow-x-hidden">
     <div id="root"></div>
 
     <script type="text/babel">
         function App() {
-            const [authView, setAuthView] = React.useState('signin');
             const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-            const [loginUsername, setLoginUsername] = React.useState('');
-            const [loginPassword, setLoginPassword] = React.useState('');
-
+            const [loginUser, setLoginUser] = React.useState('');
+            const [loginPass, setLoginPass] = React.useState('');
+            
+            const [activeTab, setActiveTab] = React.useState('dashboard');
             const [nodes, setNodes] = React.useState([]);
             const [selectedNodeId, setSelectedNodeId] = React.useState('');
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
-            // Controls
+            // Spam State
             const [spamThread, setSpamThread] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
             const [spamPayload, setSpamPayload] = React.useState('');
 
+            // NC Lock State
             const [ncThread, setNcThread] = React.useState('');
             const [ncText, setNcText] = React.useState('');
             const [ncJitter, setNcJitter] = React.useState('4.0');
+
+            // Group Creator State
+            const [groupTitle, setGroupTitle] = React.useState('');
+            const [groupMembers, setGroupMembers] = React.useState('');
+            const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
 
             const [activeTasks, setActiveTasks] = React.useState([]);
             const [logs, setLogs] = React.useState([]);
 
             React.useEffect(() => {
-                if (localStorage.getItem('panel_logged_in') === 'true') setIsLoggedIn(true);
-                const savedNodes = localStorage.getItem('panel_nodes');
-                if (savedNodes) {
+                if(localStorage.getItem('panel_logged') === 'true') setIsLoggedIn(true);
+                const saved = localStorage.getItem('panel_nodes');
+                if(saved) {
                     try {
-                        const parsed = JSON.parse(savedNodes);
+                        const parsed = JSON.parse(saved);
                         setNodes(parsed);
                         if(parsed.length > 0) setSelectedNodeId(parsed[0].id);
-                    } catch(e) {}
+                    } catch(e){}
                 }
             }, []);
 
@@ -52,31 +58,28 @@
                 if(nodes.length > 0) localStorage.setItem('panel_nodes', JSON.stringify(nodes));
             }, [nodes]);
 
-            // Sync Tasks and Logs
             React.useEffect(() => {
                 if(!isLoggedIn) return;
                 const interval = setInterval(() => {
                     fetch('/api/tasks/active')
-                        .then(res => res.json())
-                        .then(data => {
-                            if(data.tasks) setActiveTasks(data.tasks);
-                            if(data.logs) setLogs(data.logs);
-                        })
-                        .catch(() => {});
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.tasks) setActiveTasks(data.tasks);
+                        if(data.logs) setLogs(data.logs);
+                    }).catch(()=>{});
                 }, 2000);
                 return () => clearInterval(interval);
             }, [isLoggedIn]);
 
-            const handleSignIn = (e) => {
+            const handleLogin = (e) => {
                 e.preventDefault();
                 setIsLoggedIn(true);
-                localStorage.setItem('panel_logged_in', 'true');
+                localStorage.setItem('panel_logged', 'true');
             };
 
             const handleAddAccount = (e) => {
                 e.preventDefault();
-                if (!inputSessionId.trim()) return alert('Enter Session ID');
-
+                if(!inputSessionId.trim()) return alert('Enter Session ID');
                 setIsVerifying(true);
                 fetch('/api/account/verify', {
                     method: 'POST',
@@ -87,144 +90,289 @@
                 .then(data => {
                     setIsVerifying(false);
                     if(data.status === 'success') {
-                        const newNode = { id: Date.now().toString(), username: data.username, sessionid: data.sessionid };
-                        setNodes(prev => [...prev, newNode]);
-                        setSelectedNodeId(newNode.id);
+                        const newItem = { id: Date.now().toString(), username: data.username, sessionid: data.sessionid };
+                        setNodes(prev => [...prev, newItem]);
+                        setSelectedNodeId(newItem.id);
                         setInputSessionId('');
                         alert(`Connected @${data.username}`);
                     } else alert(data.message);
-                })
-                .catch(() => { setIsVerifying(false); alert('Verification Error'); });
+                }).catch(()=>{ setIsVerifying(false); alert('Network Error'); });
+            };
+
+            const removeAccount = (id) => {
+                setNodes(prev => prev.filter(n => n.id !== id));
             };
 
             const startSpam = () => {
-                const activeNode = nodes.find(n => n.id === selectedNodeId);
-                if(!activeNode) return alert('Select Instagram ID');
-                if(!spamThread || !spamPayload) return alert('Fill Thread ID & Payload');
-
-                // Split multiline string while keeping empty line patterns intact
-                const formattedPayload = spamPayload.split('\n');
-
+                const node = nodes.find(n => n.id === selectedNodeId);
+                if(!node) return alert('Select an Account first');
+                if(!spamThread || !spamPayload) return alert('Fill Thread ID & Messages');
                 fetch('/api/task/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        type: 'spam',
-                        session_id: activeNode.sessionid,
-                        username: activeNode.username,
-                        thread_id: spamThread,
-                        jitter: spamJitter,
-                        payload: formattedPayload
+                        type: 'spam', session_id: node.sessionid, username: node.username,
+                        thread_id: spamThread, jitter: spamJitter, payload: spamPayload.split('\n')
                     })
-                });
+                }).then(()=>alert('Spam Task Launched!'));
             };
 
             const startNcLock = () => {
-                const activeNode = nodes.find(n => n.id === selectedNodeId);
-                if(!activeNode) return alert('Select Instagram ID');
+                const node = nodes.find(n => n.id === selectedNodeId);
+                if(!node) return alert('Select an Account first');
                 if(!ncThread || !ncText) return alert('Fill Thread ID & Title Base');
-
                 fetch('/api/task/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        type: 'nclock',
-                        session_id: activeNode.sessionid,
-                        username: activeNode.username,
-                        thread_id: ncThread,
-                        jitter: ncJitter,
-                        nc_text: ncText
+                        type: 'nclock', session_id: node.sessionid, username: node.username,
+                        thread_id: ncThread, jitter: ncJitter, nc_text: ncText
                     })
-                });
+                }).then(()=>alert('NC Lock Task Enabled!'));
             };
 
-            const stopTask = (taskId) => {
-                fetch('/api/task/stop', {
+            const handleCreateGroup = (e) => {
+                e.preventDefault();
+                const node = nodes.find(n => n.id === selectedNodeId);
+                if(!node) return alert('Select an Account first');
+                if(!groupTitle || !groupMembers) return alert('Enter Group Title and Usernames');
+
+                setIsCreatingGroup(true);
+                fetch('/api/group/create', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ task_id: taskId })
+                    body: JSON.stringify({
+                        session_id: node.sessionid,
+                        title: groupTitle,
+                        usernames: groupMembers.split('\n')
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setIsCreatingGroup(false);
+                    if(data.status === 'success') {
+                        alert(`Group Created! Thread ID: ${data.thread_id}`);
+                        setGroupTitle('');
+                        setGroupMembers('');
+                    } else {
+                        alert(data.message);
+                    }
+                }).catch(()=>{ setIsCreatingGroup(false); alert('Error creating group'); });
+            };
+
+            const stopTask = (tid) => {
+                fetch('/api/task/stop', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ task_id: tid })
                 });
             };
 
-            return (
-                <div className="min-h-screen bg-[#0a0a0a] text-white p-4 flex flex-col">
-                    {!isLoggedIn ? (
-                        <div className="flex-1 flex items-center justify-center">
-                            <form onSubmit={handleSignIn} className="bg-[#141414] border border-red-900/60 p-6 rounded-2xl w-full max-w-md flex flex-col gap-4">
-                                <h1 className="text-xl font-black text-red-600 uppercase text-center">AARYAV PANNEL SPAM IG</h1>
-                                <input type="text" placeholder="Username" value={loginUsername} onChange={e=>setLoginUsername(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                <input type="password" placeholder="Password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                <button type="submit" className="py-2.5 bg-red-600 font-bold text-xs uppercase rounded">Sign In</button>
-                            </form>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col flex-1 gap-4 max-w-6xl mx-auto w-full">
-                            <header className="border-b border-red-900/60 pb-3 flex justify-between items-center bg-[#141414] p-4 rounded-xl">
-                                <h1 className="text-xl font-black text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
-                                <button onClick={()=>{setIsLoggedIn(false); localStorage.removeItem('panel_logged_in');}} className="bg-neutral-900 text-neutral-400 px-3 py-1.5 rounded text-xs">Logout</button>
-                            </header>
+            if(!isLoggedIn) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-black">
+                        <form onSubmit={handleLogin} className="bg-[#111] border border-neutral-800 p-8 rounded-2xl w-full max-w-sm flex flex-col gap-4 shadow-2xl">
+                            <h1 className="text-xl font-black text-red-600 uppercase text-center tracking-wider">AARYAV PANNEL</h1>
+                            <p className="text-xs text-neutral-500 text-center mb-2">Secure Automation Suite</p>
+                            <input type="text" placeholder="Username" value={loginUser} onChange={e=>setLoginUser(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs outline-none text-white focus:border-red-600"/>
+                            <input type="password" placeholder="Password" value={loginPass} onChange={e=>setLoginPass(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs outline-none text-white focus:border-red-600"/>
+                            <button type="submit" className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">Access Panel</button>
+                        </form>
+                    </div>
+                );
+            }
 
-                            {/* Account Manager */}
-                            <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
-                                <span className="text-xs font-bold text-red-500 uppercase">1. Add & Select Account</span>
-                                <form onSubmit={handleAddAccount} className="flex gap-2">
-                                    <input type="text" placeholder="Paste sessionid cookie..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs flex-1 outline-none text-white"/>
-                                    <button type="submit" disabled={isVerifying} className="bg-red-600 text-white px-4 py-2 rounded text-xs font-bold">{isVerifying ? 'Verifying...' : '+ Add ID'}</button>
-                                </form>
-                                <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-red-400 font-bold outline-none">
-                                    {nodes.length === 0 ? <option>No Accounts Saved</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
+            const activeNode = nodes.find(n => n.id === selectedNodeId);
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row bg-[#070707]">
+                    {/* Sidebar Navigation */}
+                    <aside className="w-full md:w-64 bg-[#111] border-r border-neutral-900 flex flex-col justify-between p-4">
+                        <div>
+                            <div className="py-4 px-2 mb-4 border-b border-neutral-900">
+                                <h1 className="text-lg font-black text-red-600 tracking-wider">AARYAV PANNEL</h1>
+                                <p className="text-[10px] text-emerald-500 font-bold mt-0.5">● SYSTEM ONLINE</p>
+                            </div>
+                            <nav className="flex flex-col gap-1.5">
+                                <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='dashboard'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📊 Dashboard</button>
+                                <button onClick={()=>setActiveTab('accounts')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='accounts'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👤 Accounts Manager</button>
+                                <button onClick={()=>setActiveTab('spam')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='spam'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>⚡ DM Spam Tool</button>
+                                <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='nclock'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🛡️ NC Lock (Title)</button>
+                                <button onClick={()=>setActiveTab('groups')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='groups'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👥 Group Creator</button>
+                            </nav>
+                        </div>
+                        <div className="pt-4 border-t border-neutral-900 flex flex-col gap-3">
+                            <div className="bg-black p-2.5 rounded border border-neutral-900 text-[11px]">
+                                <span className="text-neutral-500 block">Active Account:</span>
+                                <span className="text-red-500 font-bold">{activeNode ? '@'+activeNode.username : 'None Selected'}</span>
+                            </div>
+                            <button onClick={()=>{setIsLoggedIn(false); localStorage.removeItem('panel_logged');}} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 py-2 rounded text-xs font-bold uppercase">Logout</button>
+                        </div>
+                    </aside>
+
+                    {/* Main Content Area */}
+                    <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
+                        {/* Top Bar */}
+                        <header className="flex justify-between items-center bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                            <div>
+                                <h2 className="text-sm font-black uppercase tracking-wider text-red-500">{activeTab.toUpperCase()} PANEL</h2>
+                                <p className="text-xs text-neutral-500">Manage automation tasks and active threads effortlessly.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs text-neutral-400">Selected ID:</span>
+                                <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded px-2.5 py-1 text-xs text-red-400 font-bold outline-none">
+                                    {nodes.length === 0 ? <option>No Accounts Added</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
                                 </select>
                             </div>
+                        </header>
 
-                            {/* Main Controls */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
-                                    <h2 className="text-sm font-bold text-red-500 uppercase">Spam DM Campaign</h2>
-                                    <input type="text" placeholder="Target Thread ID" value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <input type="text" placeholder="Delay Sec (e.g. 3.5)" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <textarea rows="4" placeholder="Messages (Supports blank newlines)..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none resize-none"></textarea>
-                                    <button onClick={startSpam} className="py-2.5 bg-red-600 font-bold text-xs uppercase rounded">Launch Task</button>
-                                </div>
-
-                                <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
-                                    <h2 className="text-sm font-bold text-red-500 uppercase">NC Lock (Title Protection)</h2>
-                                    <input type="text" placeholder="Target Thread ID" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <input type="text" placeholder="Protected Base Title" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <input type="text" placeholder="Rotation Delay Sec (e.g. 4.0)" value={ncJitter} onChange={e=>setNcJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <button onClick={startNcLock} className="py-2.5 bg-neutral-800 text-red-400 font-bold text-xs uppercase rounded hover:bg-neutral-700">Enable NC Lock</button>
-                                </div>
-                            </div>
-
-                            {/* Active Processes Monitor */}
-                            <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
-                                <h2 className="text-sm font-bold text-red-500 uppercase">Active Running Processes</h2>
-                                {activeTasks.length === 0 ? (
-                                    <p className="text-xs text-neutral-500 italic">No tasks currently running.</p>
-                                ) : (
-                                    <div className="flex flex-col gap-2">
-                                        {activeTasks.map(t => (
-                                            <div key={t.task_id} className="flex justify-between items-center bg-black p-2.5 border border-neutral-900 rounded">
-                                                <div className="text-xs">
-                                                    <span className="text-red-500 font-bold">[{t.type.toUpperCase()}]</span>
-                                                    <span className="ml-2 text-neutral-300">@{t.username}</span>
-                                                    <span className="ml-2 text-neutral-500">Thread: {t.thread_id}</span>
-                                                    <span className="ml-2 text-neutral-600">({t.started_at})</span>
-                                                </div>
-                                                <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1 rounded uppercase">
-                                                    Terminate
-                                                </button>
-                                            </div>
-                                        ))}
+                        {/* TAB 1: DASHBOARD */}
+                        {activeTab === 'dashboard' && (
+                            <div className="flex flex-col gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                                        <span className="text-neutral-500 text-xs uppercase font-bold">Connected Accounts</span>
+                                        <h3 className="text-2xl font-black text-white mt-1">{nodes.length}</h3>
                                     </div>
-                                )}
-                            </div>
+                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                                        <span className="text-neutral-500 text-xs uppercase font-bold">Active Processes</span>
+                                        <h3 className="text-2xl font-black text-red-500 mt-1">{activeTasks.length}</h3>
+                                    </div>
+                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Status</span>
+                                        <h3 className="text-2xl font-black text-emerald-500 mt-1">Operational</h3>
+                                    </div>
+                                </div>
 
-                            {/* Logs */}
-                            <div className="bg-black border border-red-950 p-3 rounded-xl font-mono text-[11px] h-40 overflow-y-auto text-red-500">
-                                {logs.map((lg, i) => <div key={i}>{lg}</div>)}
+                                {/* Active Tasks Monitor */}
+                                <div className="bg-[#111] border border-neutral-900 p-5 rounded-xl flex flex-col gap-3">
+                                    <h3 className="text-xs font-bold text-red-500 uppercase">Live Running Background Processes</h3>
+                                    {activeTasks.length === 0 ? (
+                                        <p className="text-xs text-neutral-600 italic">No tasks currently active.</p>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            {activeTasks.map(t => (
+                                                <div key={t.task_id} className="flex justify-between items-center bg-black p-3 border border-neutral-900 rounded-lg">
+                                                    <div className="text-xs flex items-center gap-3">
+                                                        <span className="bg-red-950 text-red-400 font-bold px-2 py-0.5 rounded text-[10px]">{t.type.toUpperCase()}</span>
+                                                        <span className="text-neutral-300 font-bold">@{t.username}</span>
+                                                        <span className="text-neutral-500">Thread: {t.thread_id}</span>
+                                                        <span className="text-neutral-600 text-[10px]">({t.started_at})</span>
+                                                    </div>
+                                                    <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase transition">
+                                                        Terminate
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                        )}
+
+                        {/* TAB 2: ACCOUNTS MANAGER */}
+                        {activeTab === 'accounts' && (
+                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-6 max-w-2xl">
+                                <div>
+                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">Add Instagram Account</h3>
+                                    <p className="text-xs text-neutral-500 mb-4">Paste your active `sessionid` cookie below to link the account securely.</p>
+                                    <form onSubmit={handleAddAccount} className="flex gap-2">
+                                        <input type="text" placeholder="Paste sessionid cookie here..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs flex-1 outline-none text-white focus:border-red-600"/>
+                                        <button type="submit" disabled={isVerifying} className="bg-red-600 text-white px-5 py-3 rounded text-xs font-bold hover:bg-red-700 transition">{isVerifying ? 'Verifying...' : '+ Connect ID'}</button>
+                                    </form>
+                                </div>
+
+                                <div className="border-t border-neutral-900 pt-4">
+                                    <h3 className="text-xs font-bold text-neutral-400 uppercase mb-3">Linked Accounts List</h3>
+                                    {nodes.length === 0 ? (
+                                        <p className="text-xs text-neutral-600 italic">No accounts linked yet.</p>
+                                    ) : (
+                                        <div className="flex flex-col gap-2">
+                                            {nodes.map(n => (
+                                                <div key={n.id} className="flex justify-between items-center bg-black p-3 border border-neutral-900 rounded-lg">
+                                                    <div className="text-xs">
+                                                        <span className="text-red-500 font-bold">@{n.username}</span>
+                                                        <span className="text-neutral-600 ml-2 font-mono text-[10px]">ID: {n.id}</span>
+                                                    </div>
+                                                    <button onClick={()=>removeAccount(n.id)} className="bg-neutral-900 hover:bg-red-950 text-neutral-400 hover:text-red-500 text-[10px] font-bold px-3 py-1 rounded transition">Remove</button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 3: SPAM CAMPAIGN */}
+                        {activeTab === 'spam' && (
+                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
+                                <h3 className="text-sm font-bold text-red-500 uppercase">Direct Message Campaign</h3>
+                                <div className="flex flex-col gap-3">
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Target Thread / Group ID</label>
+                                        <input type="text" placeholder="e.g. 3402823668..." value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Delay Interval (Seconds)</label>
+                                        <input type="text" placeholder="3.5" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Message Payload (One per line)</label>
+                                        <textarea rows="5" placeholder="Enter messages..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white"></textarea>
+                                    </div>
+                                    <button onClick={startSpam} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">Launch Spam Worker</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 4: NC LOCK */}
+                        {activeTab === 'nclock' && (
+                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
+                                <h3 className="text-sm font-bold text-red-500 uppercase">Group Name Protection (NC Lock)</h3>
+                                <div className="flex flex-col gap-3">
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Group Thread ID</label>
+                                        <input type="text" placeholder="Group Thread ID" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Protected Base Title</label>
+                                        <input type="text" placeholder="e.g. AARYAV GANG" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Rotation Delay (Seconds)</label>
+                                        <input type="text" placeholder="4.0" value={ncJitter} onChange={e=>setNcJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                    </div>
+                                    <button onClick={startNcLock} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">Enable NC Lock Worker</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 5: AUTOMATED GROUP CREATOR */}
+                        {activeTab === 'groups' && (
+                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
+                                <h3 className="text-sm font-bold text-red-500 uppercase">Automated Group Creator</h3>
+                                <p className="text-xs text-neutral-500">Create new Instagram direct message groups instantly using the active session ID and member list.</p>
+                                <form onSubmit={handleCreateGroup} className="flex flex-col gap-3">
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Group Title / Name</label>
+                                        <input type="text" placeholder="e.g. VIP SQUAD 2026" value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Member Usernames (One per line)</label>
+                                        <textarea rows="5" placeholder="username1&#10;username2&#10;username3" value={groupMembers} onChange={e=>setGroupMembers(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white"></textarea>
+                                    </div>
+                                    <button type="submit" disabled={isCreatingGroup} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">
+                                        {isCreatingGroup ? 'Creating Group...' : 'Create Instagram Group'}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {/* Terminal Logs */}
+                        <div className="bg-black border border-neutral-900 p-4 rounded-xl font-mono text-[11px] h-40 overflow-y-auto text-red-500 shadow-inner">
+                            <div className="text-neutral-600 border-b border-neutral-900 pb-1 mb-2 font-bold">[REAL-TIME TELEMETRY LOGS]</div>
+                            {logs.map((lg, i) => <div key={i}>{lg}</div>)}
                         </div>
-                    )}
+                    </main>
                 </div>
             );
         }
