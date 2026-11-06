@@ -19,19 +19,21 @@ def add_log(msg):
     if len(LOGS) > 100:
         LOGS.pop()
 
+
 def background_worker(task_id, task_data):
     add_log(f"[WORKER] Task {task_id} launched.")
+
     task_type = task_data.get('type')
     session_id = task_data.get('session_id')
     username = task_data.get('username')
     thread_id = str(task_data.get('thread_id', '')).strip()
-    
-    # Target name bina '@' ke direct use hoga jaisa user ne input diya hai
+
     target_name = task_data.get('target', '').strip()
     jitter = float(task_data.get('jitter', 5.0))
     payload = task_data.get('payload', [])
 
     client = INSTA_CLIENTS.get(session_id)
+
     if not client:
         add_log(f"[ERROR] Session client missing for @{username}")
         if task_id in ACTIVE_TASKS:
@@ -39,51 +41,61 @@ def background_worker(task_id, task_data):
         return
 
     idx = 0
+
     while ACTIVE_TASKS.get(task_id, {}).get('running', False):
         try:
             if task_type == 'spam' and payload:
                 raw_msg = payload[idx % len(payload)]
-                
+
                 if isinstance(raw_msg, str) and raw_msg.strip():
-                    # {target} ko plain target name se replace karo (no extra @)
-                    formatted_msg = raw_msg.replace("{target}", target_name)
-                    
-                    client.direct_send(formatted_msg, thread_ids=[thread_id])
-                    add_log(f"[SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
-                
+                    formatted_msg = raw_msg.replace(
+                        "{target}", target_name
+                    )
+
+                    client.direct_send(
+                        formatted_msg,
+                        thread_ids=[thread_id]
+                    )
+
+                    add_log(
+                        f"[SENT] @{username} -> Thread "
+                        f"{thread_id}: {formatted_msg[:30]}..."
+                    )
+
                 idx += 1
-                elif task_type == 'nclock':
-                    emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
-                    current_emoji = emojis[idx % len(emojis)]
-                    nc_text = task_data.get('nc_text', '').strip()
-                    new_title = f"{nc_text} {current_emoji}".strip()
 
-                    success = False
+            elif task_type == 'nclock':
+                emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
+                current_emoji = emojis[idx % len(emojis)]
 
-                    for payload_data in [
-                        {"title": new_title},
-                        {"thread_title": new_title},
-                        {"name": new_title}
-                    ]:
-                        try:
-                            client.private_request(
-                                f"direct_v2/threads/{thread_id}/update_title/",
-                                data=payload_data
-                            )
-                            success = True
-                            add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
-                            break
-                        except Exception:
-                            continue
+                nc_text = task_data.get('nc_text', '').strip()
+                new_title = f"{nc_text} {current_emoji}".strip()
 
-                    if not success:
-                        try:
-                            client.direct_thread_update_title(thread_id, new_title)
-                            add_log(f"[NC LOCK (Fallback)] @{username} -> Title: {new_title}")
-                        except Exception as inner_e:
-                            add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
+                try:
+                    client.direct_thread_update_title(
+                        thread_id,
+                        new_title
+                    )
+                    add_log(
+                        f"[NC LOCK] @{username} -> Title: {new_title}"
+                    )
 
-                    idx += 1                
+                except Exception as inner_e:
+                    add_log(
+                        f"[NC LOCK ERROR] @{username}: {str(inner_e)}"
+                    )
+
+                idx += 1
+
+            time.sleep(jitter)
+
+        except Exception as e:
+            add_log(
+                f"[ERROR] Task {task_id} (@{username}): {str(e)}"
+            )
+            time.sleep(8)
+
+    add_log(f"[WORKER] Task {task_id} terminated.")
                 idx += 1
             
             time.sleep(jitter)
