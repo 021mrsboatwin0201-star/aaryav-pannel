@@ -1,7 +1,9 @@
+
 import os
 import time
 import threading
 import urllib.request
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from instagrapi import Client
@@ -16,6 +18,7 @@ INSTA_CLIENTS = {}
 def add_log(msg):
     timestamp = time.strftime("%H:%M:%S")
     LOGS.insert(0, f"[{timestamp}] {msg}")
+
     if len(LOGS) > 100:
         LOGS.pop()
 
@@ -36,18 +39,24 @@ def background_worker(task_id, task_data):
 
     if not client:
         add_log(f"[ERROR] Session client missing for @{username}")
+
         if task_id in ACTIVE_TASKS:
             ACTIVE_TASKS[task_id]['running'] = False
+
         return
 
     idx = 0
 
     while ACTIVE_TASKS.get(task_id, {}).get('running', False):
         try:
+
+            # SPAM TASK
             if task_type == 'spam' and payload:
+
                 raw_msg = payload[idx % len(payload)]
 
                 if isinstance(raw_msg, str) and raw_msg.strip():
+
                     formatted_msg = raw_msg.replace(
                         "{target}", target_name
                     )
@@ -64,11 +73,15 @@ def background_worker(task_id, task_data):
 
                 idx += 1
 
+            # NC LOCK TASK
             elif task_type == 'nclock':
+
                 emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
+
                 current_emoji = emojis[idx % len(emojis)]
 
                 nc_text = task_data.get('nc_text', '').strip()
+
                 new_title = f"{nc_text} {current_emoji}".strip()
 
                 try:
@@ -76,11 +89,13 @@ def background_worker(task_id, task_data):
                         thread_id,
                         new_title
                     )
+
                     add_log(
                         f"[NC LOCK] @{username} -> Title: {new_title}"
                     )
 
                 except Exception as inner_e:
+
                     add_log(
                         f"[NC LOCK ERROR] @{username}: {str(inner_e)}"
                     )
@@ -90,113 +105,212 @@ def background_worker(task_id, task_data):
             time.sleep(jitter)
 
         except Exception as e:
+
             add_log(
                 f"[ERROR] Task {task_id} (@{username}): {str(e)}"
             )
+
             time.sleep(8)
 
     add_log(f"[WORKER] Task {task_id} terminated.")
-                idx += 1
-            
-            time.sleep(jitter)
-        except Exception as e:
-            add_log(f"[ERROR] Task {task_id} (@{username}): {str(e)}")
-            time.sleep(8)
 
-    add_log(f"[WORKER] Task {task_id} terminated.")
 
 def self_ping_worker():
+
     app_url = os.environ.get('RENDER_EXTERNAL_URL')
+
     if not app_url:
         return
+
     while True:
+
         try:
             time.sleep(300)
-            urllib.request.urlopen(app_url)
+
+            with urllib.request.urlopen(app_url, timeout=15):
+                pass
+
         except Exception:
             pass
 
+
 @app.route('/')
 def home():
+
     try:
         with open('index.html', 'r', encoding='utf-8') as f:
             return f.read()
+
     except Exception as e:
         return f"Error loading interface: {str(e)}"
 
+
 @app.route('/api/account/verify', methods=['POST'])
 def verify_account():
-    data = request.json
+
+    data = request.get_json(silent=True) or {}
+
     sessionid = data.get('sessionid', '').strip()
+
     if not sessionid:
-        return jsonify({'status': 'error', 'message': 'Session ID is required'}), 400
+        return jsonify({
+            'status': 'error',
+            'message': 'Session ID is required'
+        }), 400
 
     try:
         cl = Client()
-        cl.set_user_agent("Instagram 269.0.0.18.75 Android (26/8.0.0; 480dpi; 1080x1920; Samsung; SM-G930F; herolte; samsungexynos8890; en_US; 314665270)")
+
+        cl.set_user_agent(
+            "Instagram 269.0.0.18.75 Android "
+            "(26/8.0.0; 480dpi; 1080x1920; Samsung; "
+            "SM-G930F; herolte; samsungexynos8890; "
+            "en_US; 314665270)"
+        )
+
         cl.login_by_sessionid(sessionid)
-        
+
         account_info = cl.account_info()
         username = account_info.username
+
         INSTA_CLIENTS[sessionid] = cl
-        
+
         add_log(f"[AUTH SUCCESS] @{username} connected.")
-        return jsonify({'status': 'success', 'username': username, 'sessionid': sessionid})
+
+        return jsonify({
+            'status': 'success',
+            'username': username
+        })
+
     except Exception as e:
+
         add_log(f"[AUTH FAILED] {str(e)}")
-        return jsonify({'status': 'error', 'message': f'Session error: {str(e)}'}), 400
+
+        return jsonify({
+            'status': 'error',
+            'message': f'Session error: {str(e)}'
+        }), 400
+
 
 @app.route('/api/group/create', methods=['POST'])
 def create_group():
-    data = request.json
+
+    data = request.get_json(silent=True) or {}
+
     session_id = data.get('session_id')
     group_title = data.get('title')
     usernames = data.get('usernames', [])
 
     client = INSTA_CLIENTS.get(session_id)
+
     if not client:
-        return jsonify({'status': 'error', 'message': 'Session missing. Verify account first.'}), 400
+        return jsonify({
+            'status': 'error',
+            'message': 'Session missing. Verify account first.'
+        }), 400
 
     try:
-        user_pks = [str(client.user_id_from_username(u.strip().replace('@', ''))) for u in usernames if u.strip()]
-        thread = client.direct_create_group(user_pks, title=group_title)
-        add_log(f"[GROUP CREATED] '{group_title}' with {len(user_pks)} members.")
-        return jsonify({'status': 'success', 'thread_id': thread.id})
+
+        user_pks = [
+            str(
+                client.user_id_from_username(
+                    u.strip().replace('@', '')
+                )
+            )
+            for u in usernames
+            if isinstance(u, str) and u.strip()
+        ]
+
+        thread = client.direct_create_group(
+            user_pks,
+            title=group_title
+        )
+
+        add_log(
+            f"[GROUP CREATED] '{group_title}' "
+            f"with {len(user_pks)} members."
+        )
+
+        return jsonify({
+            'status': 'success',
+            'thread_id': thread.id
+        })
+
     except Exception as e:
+
         add_log(f"[GROUP ERROR] {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 400
+
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 400
+
 
 @app.route('/api/task/start', methods=['POST'])
 def start_task():
-    data = request.json
-    task_id = f"{data.get('type')}_{data.get('username')}_{int(time.time())}"
-    
+
+    data = request.get_json(silent=True) or {}
+
+    task_type = data.get('type')
+    username = data.get('username')
+
+    task_id = (
+        f"{task_type}_{username}_{time.time_ns()}"
+    )
+
     ACTIVE_TASKS[task_id] = {
         'running': True,
-        'type': data.get('type'),
-        'username': data.get('username'),
+        'type': task_type,
+        'username': username,
         'thread_id': data.get('thread_id'),
         'started_at': time.strftime("%H:%M:%S")
     }
 
-    thread = threading.Thread(target=background_worker, args=(task_id, data), daemon=True)
+    thread = threading.Thread(
+        target=background_worker,
+        args=(task_id, data),
+        daemon=True
+    )
+
     thread.start()
-    return jsonify({'status': 'success', 'task_id': task_id})
+
+    return jsonify({
+        'status': 'success',
+        'task_id': task_id
+    })
+
 
 @app.route('/api/task/stop', methods=['POST'])
 def stop_task():
-    data = request.json
+
+    data = request.get_json(silent=True) or {}
+
     task_id = data.get('task_id')
+
     if task_id in ACTIVE_TASKS:
+
         ACTIVE_TASKS[task_id]['running'] = False
-        return jsonify({'status': 'success', 'message': f'Task {task_id} stopped.'})
-    return jsonify({'status': 'error', 'message': 'Task not found'}), 404
+
+        return jsonify({
+            'status': 'success',
+            'message': f'Task {task_id} stopped.'
+        })
+
+    return jsonify({
+        'status': 'error',
+        'message': 'Task not found'
+    }), 404
+
 
 @app.route('/api/tasks/active', methods=['GET'])
 def get_active_tasks():
+
     running_list = []
+
     for tid, info in list(ACTIVE_TASKS.items()):
+
         if info.get('running'):
+
             running_list.append({
                 'task_id': tid,
                 'type': info.get('type'),
@@ -204,9 +318,24 @@ def get_active_tasks():
                 'thread_id': info.get('thread_id'),
                 'started_at': info.get('started_at')
             })
-    return jsonify({'tasks': running_list, 'logs': LOGS})
+
+    return jsonify({
+        'tasks': running_list,
+        'logs': LOGS
+    })
+
 
 if __name__ == '__main__':
+
     port = int(os.environ.get('PORT', 5000))
-    threading.Thread(target=self_ping_worker, daemon=True).start()
-    app.run(host='0.0.0.0', port=port)
+
+    threading.Thread(
+        target=self_ping_worker,
+        daemon=True
+    ).start()
+
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=False
+    )
