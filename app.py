@@ -82,7 +82,7 @@ def home():
     except Exception as e:
         return f"Error loading interface: {str(e)}"
 
-# Verify Session ID & Auto-fetch Username via Instagrapi
+# Verify Session ID & Auto-fetch Username with Android Device Simulation
 @app.route('/api/account/verify', methods=['POST'])
 def verify_account():
     data = request.json
@@ -93,7 +93,10 @@ def verify_account():
 
     try:
         cl = Client()
+        # Simulate standard Android App User-Agent to prevent cloud/IP blocks
+        cl.set_user_agent("Instagram 269.0.0.18.75 Android (26/8.0.0; 480dpi; 1080x1920; Samsung; SM-G930F; herolte; samsungexynos8890; en_US; 314665270)")
         cl.login_by_sessionid(sessionid)
+        
         account_info = cl.account_info()
         username = account_info.username
         
@@ -107,8 +110,8 @@ def verify_account():
             'sessionid': sessionid
         })
     except Exception as e:
-        add_log(f"[AUTH FAILED] Invalid Session ID: {str(e)}")
-        return jsonify({'status': 'error', 'message': 'Invalid Session ID or checkpoint required by Instagram.'}), 400
+        add_log(f"[AUTH FAILED] Session rejected or invalid: {str(e)}")
+        return jsonify({'status': 'error', 'message': 'Session ID expired or blocked by Instagram security. Try a fresh session.'}), 400
 
 @app.route('/api/task/start', methods=['POST'])
 def start_task():
