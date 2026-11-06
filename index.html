@@ -23,6 +23,7 @@
 
             const [nodes, setNodes] = React.useState([]);
             const [selectedNodeId, setSelectedNodeId] = React.useState('');
+            const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
             // Spam State
@@ -38,6 +39,29 @@
             const [ncActive, setNcActive] = React.useState(false);
 
             const [logs, setLogs] = React.useState([]);
+
+            // Auto-login & load saved nodes from localStorage on startup
+            React.useEffect(() => {
+                const savedAuth = localStorage.getItem('panel_logged_in');
+                if (savedAuth === 'true') {
+                    setIsLoggedIn(true);
+                }
+                const savedNodes = localStorage.getItem('panel_nodes');
+                if (savedNodes) {
+                    try {
+                        const parsed = JSON.parse(savedNodes);
+                        setNodes(parsed);
+                        if(parsed.length > 0) setSelectedNodeId(parsed[0].id);
+                    } catch(e) {}
+                }
+            }, []);
+
+            // Save nodes to localStorage whenever they change
+            React.useEffect(() => {
+                if(nodes.length > 0) {
+                    localStorage.setItem('panel_nodes', JSON.stringify(nodes));
+                }
+            }, [nodes]);
 
             // Sync logs
             React.useEffect(() => {
@@ -63,6 +87,7 @@
                 const savedPass = localStorage.getItem('panel_pass');
                 if (savedUser && loginUsername === savedUser && loginPassword === savedPass) {
                     setIsLoggedIn(true);
+                    localStorage.setItem('panel_logged_in', 'true');
                 } else if (!savedUser) {
                     alert('No account found! Please Sign Up first.');
                 } else {
@@ -79,16 +104,21 @@
                 setAuthView('signin');
             };
 
-            // Session ID input inside panel prompt & auto-verify username
-            const handleAddAccount = () => {
-                const sessionCookie = prompt("Paste Instagram Session ID (sessionid cookie):");
-                if (!sessionCookie || !sessionCookie.trim()) return;
+            const handleLogout = () => {
+                setIsLoggedIn(false);
+                localStorage.removeItem('panel_logged_in');
+            };
+
+            // Inline Session ID Add Handler
+            const handleAddAccount = (e) => {
+                e.preventDefault();
+                if (!inputSessionId || !inputSessionId.trim()) return alert('Please enter a valid session ID!');
 
                 setIsVerifying(true);
                 fetch('/api/account/verify', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ sessionid: sessionCookie.trim() })
+                    body: JSON.stringify({ sessionid: inputSessionId.trim() })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -100,7 +130,8 @@
                             sessionid: data.sessionid
                         };
                         setNodes(prev => [...prev, newNode]);
-                        if(!selectedNodeId) setSelectedNodeId(newNode.id);
+                        setSelectedNodeId(newNode.id);
+                        setInputSessionId('');
                         alert(`Successfully connected @${data.username}!`);
                     } else {
                         alert(data.message || 'Verification failed!');
@@ -205,26 +236,37 @@
                                     <h1 className="text-xl font-black text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
                                     <p className="text-xs text-neutral-400">Status: <span className="text-emerald-500 font-bold">LIVE API BACKEND CONNECTED</span></p>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <button onClick={handleAddAccount} disabled={isVerifying} className="bg-red-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-red-700 transition">
-                                        {isVerifying ? 'Verifying...' : '+ Add IG Session ID'}
-                                    </button>
-                                    <button onClick={()=>setIsLoggedIn(false)} className="bg-neutral-900 text-neutral-400 px-3 py-2 rounded text-xs">Logout</button>
-                                </div>
+                                <button onClick={handleLogout} className="bg-neutral-900 text-neutral-400 px-3 py-2 rounded text-xs">Logout</button>
                             </header>
 
-                            {/* Node / Account Selection Bar */}
-                            <div className="bg-[#141414] border border-red-950 p-3 rounded-xl flex items-center gap-4">
-                                <span className="text-xs font-bold text-red-500 uppercase">Active Sender ID:</span>
-                                {nodes.length === 0 ? (
-                                    <span className="text-xs text-neutral-500 italic">No IDs added yet. Click "+ Add IG Session ID" above.</span>
-                                ) : (
-                                    <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-red-400 font-bold outline-none flex-1">
-                                        {nodes.map(n => (
-                                            <option key={n.id} value={n.id}>@{n.username} (Connected)</option>
-                                        ))}
-                                    </select>
-                                )}
+                            {/* Inline Session ID Input & Management Bar */}
+                            <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
+                                <h2 className="text-sm font-bold text-red-500 uppercase">Instagram Account Management</h2>
+                                <form onSubmit={handleAddAccount} className="flex flex-col sm:flex-row gap-2">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Paste sessionid cookie here..." 
+                                        value={inputSessionId} 
+                                        onChange={e => setInputSessionId(e.target.value)} 
+                                        className="bg-black border border-neutral-800 rounded p-2.5 text-xs flex-1 outline-none text-white"
+                                    />
+                                    <button type="submit" disabled={isVerifying} className="bg-red-600 text-white px-4 py-2.5 rounded text-xs font-bold hover:bg-red-700 transition">
+                                        {isVerifying ? 'Verifying...' : '+ Add & Verify ID'}
+                                    </button>
+                                </form>
+
+                                <div className="flex items-center gap-3 pt-2 border-t border-neutral-900">
+                                    <span className="text-xs font-bold text-neutral-400">Active Sender:</span>
+                                    {nodes.length === 0 ? (
+                                        <span className="text-xs text-neutral-500 italic">No IDs added yet. Paste session ID above.</span>
+                                    ) : (
+                                        <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-red-400 font-bold outline-none flex-1">
+                                            {nodes.map(n => (
+                                                <option key={n.id} value={n.id}>@{n.username} (Saved)</option>
+                                            ))}
+                                        </select>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
