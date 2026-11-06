@@ -52,33 +52,38 @@ def background_worker(task_id, task_data):
                     add_log(f"[SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
                 
                 idx += 1
-            elif task_type == 'nclock':
-                emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
-                current_emoji = emojis[idx % len(emojis)]
-                nc_text = task_data.get('nc_text', '')
-                new_title = f"{nc_text} {current_emoji}"
-                
-                success = False
-                # Multiple payload parameters try karega taaki parameter error solve ho jaye
-                for payload_data in [{"title": new_title}, {"thread_title": new_title}, {"name": new_title}]:
-                    try:
-                        client.private_request(
-                            f"direct_v2/threads/{thread_id}/update_title/",
-                            data=payload_data
-                        )
-                        success = True
-                        add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
-                        break
-                    except Exception:
-                        continue
-                
-                if not success:
-                    try:
-                        client.direct_thread_update_title(thread_id, new_title)
-                        add_log(f"[NC LOCK (Fallback)] @{username} -> Title: {new_title}")
-                    except Exception as inner_e:
-                        add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
-                
+                elif task_type == 'nclock':
+                    emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
+                    current_emoji = emojis[idx % len(emojis)]
+                    nc_text = task_data.get('nc_text', '').strip()
+                    new_title = f"{nc_text} {current_emoji}".strip()
+
+                    success = False
+
+                    for payload_data in [
+                        {"title": new_title},
+                        {"thread_title": new_title},
+                        {"name": new_title}
+                    ]:
+                        try:
+                            client.private_request(
+                                f"direct_v2/threads/{thread_id}/update_title/",
+                                data=payload_data
+                            )
+                            success = True
+                            add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
+                            break
+                        except Exception:
+                            continue
+
+                    if not success:
+                        try:
+                            client.direct_thread_update_title(thread_id, new_title)
+                            add_log(f"[NC LOCK (Fallback)] @{username} -> Title: {new_title}")
+                        except Exception as inner_e:
+                            add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
+
+                    idx += 1                
                 idx += 1
             
             time.sleep(jitter)
