@@ -24,7 +24,7 @@ def background_worker(task_id, task_data):
     task_type = task_data.get('type')
     session_id = task_data.get('session_id')
     username = task_data.get('username')
-    thread_id = task_data.get('thread_id')
+    thread_id = str(task_data.get('thread_id', '')).strip()
     
     # Target name bina '@' ke direct use hoga jaisa user ne input diya hai
     target_name = task_data.get('target', '').strip()
@@ -48,7 +48,8 @@ def background_worker(task_id, task_data):
                     # {target} ko plain target name se replace karo (no extra @)
                     formatted_msg = raw_msg.replace("{target}", target_name)
                     
-                    client.direct_send(formatted_msg, thread_ids=[int(thread_id)])
+                    # Direct send using thread_id string/list format
+                    client.direct_send(formatted_msg, thread_ids=[thread_id])
                     add_log(f"[SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
                 
                 idx += 1
@@ -59,19 +60,11 @@ def background_worker(task_id, task_data):
                 new_title = f"{nc_text} {current_emoji}"
                 
                 try:
-                    # Latest API Endpoint Payload for Thread Title Update
-                    client.private_request(
-                        f"direct_v2/threads/{thread_id}/update_title/",
-                        data={"title": new_title}
-                    )
+                    # Working script wala exact clean method (thread_id as string)
+                    client.direct_thread_update_title(thread_id, new_title)
                     add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
-                except Exception as alt_e:
-                    try:
-                        # Fallback wrapper if endpoint structure varies
-                        client.direct_thread_update_title(int(thread_id), new_title)
-                        add_log(f"[NC LOCK (Fallback)] @{username} -> Title: {new_title}")
-                    except Exception as inner_e:
-                        add_log(f"[NC LOCK ERROR] @{username}: {str(alt_e)}")
+                except Exception as inner_e:
+                    add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
                 
                 idx += 1
             
