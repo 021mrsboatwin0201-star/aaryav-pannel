@@ -59,18 +59,18 @@ def background_worker(task_id, task_data):
                 new_title = f"{nc_text} {current_emoji}"
                 
                 try:
-                    # Instagrapi direct method
-                    client.direct_thread_update_title(int(thread_id), new_title)
+                    # Latest API Endpoint Payload for Thread Title Update
+                    client.private_request(
+                        f"direct_v2/threads/{thread_id}/update_title/",
+                        data={"title": new_title}
+                    )
                     add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
-                except Exception as inner_e:
+                except Exception as alt_e:
                     try:
-                        # Fallback using private_request properly (without 'method' kwarg)
-                        client.private_request(
-                            f"direct_v2/threads/{thread_id}/update_title/",
-                            data={"title": new_title}
-                        )
-                        add_log(f"[NC LOCK (Alt)] @{username} -> Title: {new_title}")
-                    except Exception as alt_e:
+                        # Fallback wrapper if endpoint structure varies
+                        client.direct_thread_update_title(int(thread_id), new_title)
+                        add_log(f"[NC LOCK (Fallback)] @{username} -> Title: {new_title}")
+                    except Exception as inner_e:
                         add_log(f"[NC LOCK ERROR] @{username}: {str(alt_e)}")
                 
                 idx += 1
