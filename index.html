@@ -18,34 +18,26 @@
             const [isLoggedIn, setIsLoggedIn] = React.useState(false);
             const [loginUsername, setLoginUsername] = React.useState('');
             const [loginPassword, setLoginPassword] = React.useState('');
-            const [regUsername, setRegUsername] = React.useState('');
-            const [regPassword, setRegPassword] = React.useState('');
 
             const [nodes, setNodes] = React.useState([]);
             const [selectedNodeId, setSelectedNodeId] = React.useState('');
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
-            // Spam State
+            // Controls
             const [spamThread, setSpamThread] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
             const [spamPayload, setSpamPayload] = React.useState('');
-            const [isSpamming, setIsSpamming] = React.useState(false);
 
-            // NC Lock State
             const [ncThread, setNcThread] = React.useState('');
             const [ncText, setNcText] = React.useState('');
             const [ncJitter, setNcJitter] = React.useState('4.0');
-            const [ncActive, setNcActive] = React.useState(false);
 
+            const [activeTasks, setActiveTasks] = React.useState([]);
             const [logs, setLogs] = React.useState([]);
 
-            // Auto-login & load saved nodes from localStorage on startup
             React.useEffect(() => {
-                const savedAuth = localStorage.getItem('panel_logged_in');
-                if (savedAuth === 'true') {
-                    setIsLoggedIn(true);
-                }
+                if (localStorage.getItem('panel_logged_in') === 'true') setIsLoggedIn(true);
                 const savedNodes = localStorage.getItem('panel_nodes');
                 if (savedNodes) {
                     try {
@@ -56,25 +48,19 @@
                 }
             }, []);
 
-            // Save nodes to localStorage whenever they change
             React.useEffect(() => {
-                if(nodes.length > 0) {
-                    localStorage.setItem('panel_nodes', JSON.stringify(nodes));
-                }
+                if(nodes.length > 0) localStorage.setItem('panel_nodes', JSON.stringify(nodes));
             }, [nodes]);
 
-            // Sync logs
+            // Sync Tasks and Logs
             React.useEffect(() => {
                 if(!isLoggedIn) return;
                 const interval = setInterval(() => {
-                    fetch('/api/logs')
+                    fetch('/api/tasks/active')
                         .then(res => res.json())
                         .then(data => {
+                            if(data.tasks) setActiveTasks(data.tasks);
                             if(data.logs) setLogs(data.logs);
-                            if(data.active_tasks) {
-                                if(data.active_tasks['spam_task'] !== undefined) setIsSpamming(data.active_tasks['spam_task']);
-                                if(data.active_tasks['nc_task'] !== undefined) setNcActive(data.active_tasks['nc_task']);
-                            }
                         })
                         .catch(() => {});
                 }, 2000);
@@ -83,36 +69,13 @@
 
             const handleSignIn = (e) => {
                 e.preventDefault();
-                const savedUser = localStorage.getItem('panel_user');
-                const savedPass = localStorage.getItem('panel_pass');
-                if (savedUser && loginUsername === savedUser && loginPassword === savedPass) {
-                    setIsLoggedIn(true);
-                    localStorage.setItem('panel_logged_in', 'true');
-                } else if (!savedUser) {
-                    alert('No account found! Please Sign Up first.');
-                } else {
-                    alert('Invalid credentials!');
-                }
+                setIsLoggedIn(true);
+                localStorage.setItem('panel_logged_in', 'true');
             };
 
-            const handleSignUp = (e) => {
-                e.preventDefault();
-                if(!regUsername || !regPassword) return alert('Fill all fields');
-                localStorage.setItem('panel_user', regUsername);
-                localStorage.setItem('panel_pass', regPassword);
-                alert('Account registered! Now Sign In.');
-                setAuthView('signin');
-            };
-
-            const handleLogout = () => {
-                setIsLoggedIn(false);
-                localStorage.removeItem('panel_logged_in');
-            };
-
-            // Inline Session ID Add Handler
             const handleAddAccount = (e) => {
                 e.preventDefault();
-                if (!inputSessionId || !inputSessionId.trim()) return alert('Please enter a valid session ID!');
+                if (!inputSessionId.trim()) return alert('Enter Session ID');
 
                 setIsVerifying(true);
                 fetch('/api/account/verify', {
@@ -124,82 +87,62 @@
                 .then(data => {
                     setIsVerifying(false);
                     if(data.status === 'success') {
-                        const newNode = {
-                            id: Date.now().toString(),
-                            username: data.username,
-                            sessionid: data.sessionid
-                        };
+                        const newNode = { id: Date.now().toString(), username: data.username, sessionid: data.sessionid };
                         setNodes(prev => [...prev, newNode]);
                         setSelectedNodeId(newNode.id);
                         setInputSessionId('');
-                        alert(`Successfully connected @${data.username}!`);
-                    } else {
-                        alert(data.message || 'Verification failed!');
-                    }
+                        alert(`Connected @${data.username}`);
+                    } else alert(data.message);
                 })
-                .catch(() => {
-                    setIsVerifying(false);
-                    alert('Network error during verification.');
+                .catch(() => { setIsVerifying(false); alert('Verification Error'); });
+            };
+
+            const startSpam = () => {
+                const activeNode = nodes.find(n => n.id === selectedNodeId);
+                if(!activeNode) return alert('Select Instagram ID');
+                if(!spamThread || !spamPayload) return alert('Fill Thread ID & Payload');
+
+                // Split multiline string while keeping empty line patterns intact
+                const formattedPayload = spamPayload.split('\n');
+
+                fetch('/api/task/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        type: 'spam',
+                        session_id: activeNode.sessionid,
+                        username: activeNode.username,
+                        thread_id: spamThread,
+                        jitter: spamJitter,
+                        payload: formattedPayload
+                    })
                 });
             };
 
-            const toggleSpam = () => {
-                if(nodes.length === 0) return alert('Please add at least one Instagram ID first!');
+            const startNcLock = () => {
                 const activeNode = nodes.find(n => n.id === selectedNodeId);
-                if(!activeNode) return alert('Select a valid Instagram ID!');
-                if(!spamThread || !spamPayload) return alert('Enter Thread ID and message payload!');
+                if(!activeNode) return alert('Select Instagram ID');
+                if(!ncThread || !ncText) return alert('Fill Thread ID & Title Base');
 
-                const endpoint = isSpamming ? '/api/task/stop' : '/api/task/start';
-                const payload = {
-                    task_id: 'spam_task',
-                    type: 'spam',
-                    session_id: activeNode.sessionid,
-                    username: activeNode.username,
-                    thread_id: spamThread,
-                    jitter: spamJitter,
-                    payload: spamPayload.split('\n').filter(x => x.trim())
-                };
-
-                fetch(endpoint, {
+                fetch('/api/task/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                }).then(res => res.json()).then(data => {
-                    if(data.status === 'success') {
-                        setIsSpamming(!isSpamming);
-                    } else {
-                        alert(data.message);
-                    }
+                    body: JSON.stringify({
+                        type: 'nclock',
+                        session_id: activeNode.sessionid,
+                        username: activeNode.username,
+                        thread_id: ncThread,
+                        jitter: ncJitter,
+                        nc_text: ncText
+                    })
                 });
             };
 
-            const toggleNcLock = () => {
-                if(nodes.length === 0) return alert('Please add at least one Instagram ID first!');
-                const activeNode = nodes.find(n => n.id === selectedNodeId);
-                if(!activeNode) return alert('Select a valid Instagram ID!');
-                if(!ncThread || !ncText) return alert('Enter Group Thread ID and Title Base!');
-
-                const endpoint = ncActive ? '/api/task/stop' : '/api/task/start';
-                const payload = {
-                    task_id: 'nc_task',
-                    type: 'nclock',
-                    session_id: activeNode.sessionid,
-                    username: activeNode.username,
-                    thread_id: ncThread,
-                    jitter: ncJitter,
-                    nc_text: ncText
-                };
-
-                fetch(endpoint, {
+            const stopTask = (taskId) => {
+                fetch('/api/task/stop', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                }).then(res => res.json()).then(data => {
-                    if(data.status === 'success') {
-                        setNcActive(!ncActive);
-                    } else {
-                        alert(data.message);
-                    }
+                    body: JSON.stringify({ task_id: taskId })
                 });
             };
 
@@ -207,95 +150,77 @@
                 <div className="min-h-screen bg-[#0a0a0a] text-white p-4 flex flex-col">
                     {!isLoggedIn ? (
                         <div className="flex-1 flex items-center justify-center">
-                            <div className="bg-[#141414] border border-red-900/60 p-6 rounded-2xl w-full max-w-md shadow-[0_0_30px_rgba(255,0,60,0.2)]">
-                                <div className="text-center mb-6">
-                                    <h1 className="text-xl font-black text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
-                                    <p className="text-xs text-neutral-400">Owner: @Abusivegang</p>
-                                </div>
-                                {authView === 'signin' ? (
-                                    <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-                                        <input type="text" placeholder="Username" value={loginUsername} onChange={e=>setLoginUsername(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
-                                        <input type="password" placeholder="Password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
-                                        <button type="submit" className="py-3 bg-red-600 font-bold text-xs uppercase rounded">Sign In</button>
-                                        <div className="text-center text-xs"><button type="button" onClick={()=>setAuthView('signup')} className="text-red-500 font-bold">Sign Up for Access</button></div>
-                                    </form>
-                                ) : (
-                                    <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-                                        <input type="text" placeholder="Choose Username" value={regUsername} onChange={e=>setRegUsername(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
-                                        <input type="password" placeholder="Choose Password" value={regPassword} onChange={e=>setRegPassword(e.target.value)} className="bg-black border border-neutral-800 rounded p-2.5 text-xs text-white outline-none"/>
-                                        <button type="submit" className="py-3 bg-red-600 font-bold text-xs uppercase rounded">Register Account</button>
-                                        <div className="text-center text-xs"><button type="button" onClick={()=>setAuthView('signin')} className="text-red-500 font-bold">Back to Sign In</button></div>
-                                    </form>
-                                )}
-                            </div>
+                            <form onSubmit={handleSignIn} className="bg-[#141414] border border-red-900/60 p-6 rounded-2xl w-full max-w-md flex flex-col gap-4">
+                                <h1 className="text-xl font-black text-red-600 uppercase text-center">AARYAV PANNEL SPAM IG</h1>
+                                <input type="text" placeholder="Username" value={loginUsername} onChange={e=>setLoginUsername(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                <input type="password" placeholder="Password" value={loginPassword} onChange={e=>setLoginPassword(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                <button type="submit" className="py-2.5 bg-red-600 font-bold text-xs uppercase rounded">Sign In</button>
+                            </form>
                         </div>
                     ) : (
                         <div className="flex flex-col flex-1 gap-4 max-w-6xl mx-auto w-full">
-                            <header className="border-b border-red-900/60 pb-4 flex justify-between items-center bg-[#141414] p-4 rounded-xl">
-                                <div>
-                                    <h1 className="text-xl font-black text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
-                                    <p className="text-xs text-neutral-400">Status: <span className="text-emerald-500 font-bold">LIVE API BACKEND CONNECTED</span></p>
-                                </div>
-                                <button onClick={handleLogout} className="bg-neutral-900 text-neutral-400 px-3 py-2 rounded text-xs">Logout</button>
+                            <header className="border-b border-red-900/60 pb-3 flex justify-between items-center bg-[#141414] p-4 rounded-xl">
+                                <h1 className="text-xl font-black text-red-600 uppercase">AARYAV PANNEL SPAM IG</h1>
+                                <button onClick={()=>{setIsLoggedIn(false); localStorage.removeItem('panel_logged_in');}} className="bg-neutral-900 text-neutral-400 px-3 py-1.5 rounded text-xs">Logout</button>
                             </header>
 
-                            {/* Inline Session ID Input & Management Bar */}
+                            {/* Account Manager */}
                             <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
-                                <h2 className="text-sm font-bold text-red-500 uppercase">Instagram Account Management</h2>
-                                <form onSubmit={handleAddAccount} className="flex flex-col sm:flex-row gap-2">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Paste sessionid cookie here..." 
-                                        value={inputSessionId} 
-                                        onChange={e => setInputSessionId(e.target.value)} 
-                                        className="bg-black border border-neutral-800 rounded p-2.5 text-xs flex-1 outline-none text-white"
-                                    />
-                                    <button type="submit" disabled={isVerifying} className="bg-red-600 text-white px-4 py-2.5 rounded text-xs font-bold hover:bg-red-700 transition">
-                                        {isVerifying ? 'Verifying...' : '+ Add & Verify ID'}
-                                    </button>
+                                <span className="text-xs font-bold text-red-500 uppercase">1. Add & Select Account</span>
+                                <form onSubmit={handleAddAccount} className="flex gap-2">
+                                    <input type="text" placeholder="Paste sessionid cookie..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs flex-1 outline-none text-white"/>
+                                    <button type="submit" disabled={isVerifying} className="bg-red-600 text-white px-4 py-2 rounded text-xs font-bold">{isVerifying ? 'Verifying...' : '+ Add ID'}</button>
                                 </form>
-
-                                <div className="flex items-center gap-3 pt-2 border-t border-neutral-900">
-                                    <span className="text-xs font-bold text-neutral-400">Active Sender:</span>
-                                    {nodes.length === 0 ? (
-                                        <span className="text-xs text-neutral-500 italic">No IDs added yet. Paste session ID above.</span>
-                                    ) : (
-                                        <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-red-400 font-bold outline-none flex-1">
-                                            {nodes.map(n => (
-                                                <option key={n.id} value={n.id}>@{n.username} (Saved)</option>
-                                            ))}
-                                        </select>
-                                    )}
-                                </div>
+                                <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs text-red-400 font-bold outline-none">
+                                    {nodes.length === 0 ? <option>No Accounts Saved</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
+                                </select>
                             </div>
 
+                            {/* Main Controls */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {/* Spam Panel */}
                                 <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
-                                    <h2 className="text-sm font-bold text-red-500 uppercase">Direct Message Spam Campaign</h2>
-                                    <input type="text" placeholder="Target GC / Thread ID" value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <input type="text" placeholder="Jitter Delay (Sec e.g. 3.5)" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <textarea rows="4" placeholder="Payload lines (one message per line)..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none resize-none"></textarea>
-                                    <button onClick={toggleSpam} className={`py-3 rounded font-bold text-xs uppercase transition ${isSpamming ? 'bg-red-950 text-red-500 border border-red-600 animate-pulse' : 'bg-red-600 text-white hover:bg-red-700'}`}>
-                                        {isSpamming ? 'HALT SPAM WORKER' : 'LAUNCH REAL SPAM WORKER'}
-                                    </button>
+                                    <h2 className="text-sm font-bold text-red-500 uppercase">Spam DM Campaign</h2>
+                                    <input type="text" placeholder="Target Thread ID" value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                    <input type="text" placeholder="Delay Sec (e.g. 3.5)" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                    <textarea rows="4" placeholder="Messages (Supports blank newlines)..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none resize-none"></textarea>
+                                    <button onClick={startSpam} className="py-2.5 bg-red-600 font-bold text-xs uppercase rounded">Launch Task</button>
                                 </div>
 
-                                {/* NC Lock Panel */}
                                 <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
-                                    <h2 className="text-sm font-bold text-red-500 uppercase">Group Name Protection (NC Lock)</h2>
-                                    <input type="text" placeholder="Target GC / Thread ID" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <input type="text" placeholder="Protected Title Base (e.g. AARYAV GANG)" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <input type="text" placeholder="Rotation Interval (Sec e.g. 4.0)" value={ncJitter} onChange={e=>setNcJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
-                                    <button onClick={toggleNcLock} className={`py-3 rounded font-bold text-xs uppercase transition ${ncActive ? 'bg-red-900 text-white' : 'bg-neutral-800 text-red-400 hover:bg-neutral-700'}`}>
-                                        {ncActive ? 'DISABLE NC LOCK' : 'ENABLE REAL NC LOCK'}
-                                    </button>
+                                    <h2 className="text-sm font-bold text-red-500 uppercase">NC Lock (Title Protection)</h2>
+                                    <input type="text" placeholder="Target Thread ID" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                    <input type="text" placeholder="Protected Base Title" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                    <input type="text" placeholder="Rotation Delay Sec (e.g. 4.0)" value={ncJitter} onChange={e=>setNcJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-2 text-xs outline-none"/>
+                                    <button onClick={startNcLock} className="py-2.5 bg-neutral-800 text-red-400 font-bold text-xs uppercase rounded hover:bg-neutral-700">Enable NC Lock</button>
                                 </div>
                             </div>
 
-                            {/* Live Logs Terminal */}
-                            <div className="bg-black border border-red-950 p-3 rounded-xl font-mono text-[11px] h-48 overflow-y-auto text-red-500 shadow-inner flex flex-col">
-                                <div className="text-neutral-600 border-b border-neutral-900 pb-1 mb-1">[LIVE INSTAGRAM API TELEMETRY]</div>
+                            {/* Active Processes Monitor */}
+                            <div className="bg-[#141414] border border-red-950 p-4 rounded-xl flex flex-col gap-3">
+                                <h2 className="text-sm font-bold text-red-500 uppercase">Active Running Processes</h2>
+                                {activeTasks.length === 0 ? (
+                                    <p className="text-xs text-neutral-500 italic">No tasks currently running.</p>
+                                ) : (
+                                    <div className="flex flex-col gap-2">
+                                        {activeTasks.map(t => (
+                                            <div key={t.task_id} className="flex justify-between items-center bg-black p-2.5 border border-neutral-900 rounded">
+                                                <div className="text-xs">
+                                                    <span className="text-red-500 font-bold">[{t.type.toUpperCase()}]</span>
+                                                    <span className="ml-2 text-neutral-300">@{t.username}</span>
+                                                    <span className="ml-2 text-neutral-500">Thread: {t.thread_id}</span>
+                                                    <span className="ml-2 text-neutral-600">({t.started_at})</span>
+                                                </div>
+                                                <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1 rounded uppercase">
+                                                    Terminate
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Logs */}
+                            <div className="bg-black border border-red-950 p-3 rounded-xl font-mono text-[11px] h-40 overflow-y-auto text-red-500">
                                 {logs.map((lg, i) => <div key={i}>{lg}</div>)}
                             </div>
                         </div>
