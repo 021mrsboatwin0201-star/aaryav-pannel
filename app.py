@@ -11,7 +11,7 @@ CORS(app)
 
 ACTIVE_TASKS = {}
 LOGS = []
-INSTA_CLIENTS = {}  # Stores authenticated client instances per session_id
+INSTA_CLIENTS = {}
 
 def add_log(msg):
     timestamp = time.strftime("%H:%M:%S")
@@ -19,7 +19,7 @@ def add_log(msg):
     if len(LOGS) > 100:
         LOGS.pop()
 
-# Background Worker with Real Instagrapi Integration
+# Worker logic with dynamic cancellation check
 def background_worker(task_id, task_data):
     add_log(f"[WORKER] Task {task_id} launched.")
     task_type = task_data.get('type')
@@ -33,36 +33,34 @@ def background_worker(task_id, task_data):
     emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
     idx = 0
 
-    # Get or initialize client
     client = INSTA_CLIENTS.get(session_id)
     if not client:
-        add_log(f"[ERROR] Session client not found for @{username}")
+        add_log(f"[ERROR] Session client missing for @{username}")
+        if task_id in ACTIVE_TASKS:
+            ACTIVE_TASKS[task_id]['running'] = False
         return
 
     while ACTIVE_TASKS.get(task_id, {}).get('running', False):
         try:
-            if task_type == 'spam':
+            if task_type == 'spam' and payload:
                 msg = payload[idx % len(payload)]
-                # Real Instagram Direct Message Thread Send Call
                 client.direct_send(msg, thread_ids=[int(thread_id)])
-                add_log(f"[SPAM SENT] @{username} -> Thread {thread_id}: {msg}")
+                add_log(f"[SPAM SENT] @{username} -> Thread {thread_id}: {msg[:20]}...")
                 idx += 1
             elif task_type == 'nclock':
                 current_emoji = emojis[idx % len(emojis)]
                 new_title = f"{nc_text} {current_emoji}"
-                # Real Instagram Group Thread Title Change Call
                 client.direct_thread_update_title(int(thread_id), new_title)
-                add_log(f"[NC LOCK] @{username} changed thread title to: {new_title}")
+                add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
                 idx += 1
             
             time.sleep(jitter)
         except Exception as e:
-            add_log(f"[ERROR] Task failed for @{username}: {str(e)}")
+            add_log(f"[ERROR] Task {task_id} (@{username}): {str(e)}")
             time.sleep(5)
 
-    add_log(f"[WORKER] Task {task_id} stopped.")
+    add_log(f"[WORKER] Task {task_id} terminated.")
 
-# Self-ping heartbeat to keep Render alive
 def self_ping_worker():
     app_url = os.environ.get('RENDER_EXTERNAL_URL')
     if not app_url:
@@ -82,7 +80,6 @@ def home():
     except Exception as e:
         return f"Error loading interface: {str(e)}"
 
-# Verify Session ID & Auto-fetch Username with Android Device Simulation
 @app.route('/api/account/verify', methods=['POST'])
 def verify_account():
     data = request.json
@@ -93,51 +90,59 @@ def verify_account():
 
     try:
         cl = Client()
-        # Simulate standard Android App User-Agent to prevent cloud/IP blocks
         cl.set_user_agent("Instagram 269.0.0.18.75 Android (26/8.0.0; 480dpi; 1080x1920; Samsung; SM-G930F; herolte; samsungexynos8890; en_US; 314665270)")
         cl.login_by_sessionid(sessionid)
         
         account_info = cl.account_info()
         username = account_info.username
-        
-        # Save authenticated client instance
         INSTA_CLIENTS[sessionid] = cl
         
-        add_log(f"[AUTH SUCCESS] Account verified: @{username}")
-        return jsonify({
-            'status': 'success',
-            'username': username,
-            'sessionid': sessionid
-        })
+        add_log(f"[AUTH SUCCESS] @{username} connected.")
+        return jsonify({'status': 'success', 'username': username, 'sessionid': sessionid})
     except Exception as e:
-        add_log(f"[AUTH FAILED] Session rejected or invalid: {str(e)}")
-        return jsonify({'status': 'error', 'message': 'Session ID expired or blocked by Instagram security. Try a fresh session.'}), 400
+        add_log(f"[AUTH FAILED] {str(e)}")
+        return jsonify({'status': 'error', 'message': f'Session error: {str(e)}'}), 400
 
 @app.route('/api/task/start', methods=['POST'])
 def start_task():
     data = request.json
-    task_id = data.get('task_id', 'default_task')
+    task_id = f"{data.get('type')}_{data.get('username')}_{int(time.time())}"
     
-    if task_id in ACTIVE_TASKS and ACTIVE_TASKS[task_id]['running']:
-        return jsonify({'status': 'error', 'message': 'Task already running'}), 400
+    ACTIVE_TASKS[task_id] = {
+        'running': True,
+        'type': data.get('type'),
+        'username': data.get('username'),
+        'thread_id': data.get('thread_id'),
+        'started_at': time.strftime("%H:%M:%S")
+    }
 
-    ACTIVE_TASKS[task_id] = {'running': True, 'data': data}
     thread = threading.Thread(target=background_worker, args=(task_id, data), daemon=True)
     thread.start()
     
-    return jsonify({'status': 'success', 'message': f'Task {task_id} launched'})
+    return jsonify({'status': 'success', 'message': f'Task launched: {task_id}', 'task_id': task_id})
 
 @app.route('/api/task/stop', methods=['POST'])
 def stop_task():
     data = request.json
-    task_id = data.get('task_id', 'default_task')
+    task_id = data.get('task_id')
     if task_id in ACTIVE_TASKS:
         ACTIVE_TASKS[task_id]['running'] = False
-    return jsonify({'status': 'success', 'message': f'Task {task_id} stopped'})
+        return jsonify({'status': 'success', 'message': f'Task {task_id} stopped.'})
+    return jsonify({'status': 'error', 'message': 'Task not found'}), 404
 
-@app.route('/api/logs', methods=['GET'])
-def get_logs():
-    return jsonify({'logs': LOGS, 'active_tasks': {k: v['running'] for k, v in ACTIVE_TASKS.items()}})
+@app.route('/api/tasks/active', methods=['GET'])
+def get_active_tasks():
+    running_list = []
+    for tid, info in list(ACTIVE_TASKS.items()):
+        if info.get('running'):
+            running_list.append({
+                'task_id': tid,
+                'type': info.get('type'),
+                'username': info.get('username'),
+                'thread_id': info.get('thread_id'),
+                'started_at': info.get('started_at')
+            })
+    return jsonify({'tasks': running_list, 'logs': LOGS})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
