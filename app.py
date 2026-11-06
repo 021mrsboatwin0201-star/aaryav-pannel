@@ -25,12 +25,9 @@ def background_worker(task_id, task_data):
     session_id = task_data.get('session_id')
     username = task_data.get('username')
     thread_id = task_data.get('thread_id')
+    target_name = task_data.get('target', '')
     jitter = float(task_data.get('jitter', 3.5))
     payload = task_data.get('payload', [])
-    nc_text = task_data.get('nc_text', '')
-
-    emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
-    idx = 0
 
     client = INSTA_CLIENTS.get(session_id)
     if not client:
@@ -39,15 +36,20 @@ def background_worker(task_id, task_data):
             ACTIVE_TASKS[task_id]['running'] = False
         return
 
+    idx = 0
     while ACTIVE_TASKS.get(task_id, {}).get('running', False):
         try:
             if task_type == 'spam' and payload:
-                msg = payload[idx % len(payload)]
-                client.direct_send(msg, thread_ids=[int(thread_id)])
-                add_log(f"[SPAM SENT] @{username} -> Thread {thread_id}: {msg[:20]}...")
+                raw_msg = payload[idx % len(payload)]
+                # Replace {target} with @target_name if provided
+                formatted_msg = raw_msg.replace("{target}", f"@{target_name}" if target_name else "")
+                client.direct_send(formatted_msg, thread_ids=[int(thread_id)])
+                add_log(f"[SPAM SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
                 idx += 1
             elif task_type == 'nclock':
+                emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
                 current_emoji = emojis[idx % len(emojis)]
+                nc_text = task_data.get('nc_text', '')
                 new_title = f"{nc_text} {current_emoji}"
                 client.direct_thread_update_title(int(thread_id), new_title)
                 add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
@@ -83,7 +85,6 @@ def home():
 def verify_account():
     data = request.json
     sessionid = data.get('sessionid', '').strip()
-    
     if not sessionid:
         return jsonify({'status': 'error', 'message': 'Session ID is required'}), 400
 
