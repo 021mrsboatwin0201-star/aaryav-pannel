@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AARYAV PANNEL - Command Center</title>
+    <title>AARYAVxYASH PANNEL - Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -26,6 +26,7 @@
 
             // Spam & Matrix State
             const [spamThread, setSpamThread] = React.useState('');
+            const [spamTargetName, setSpamTargetName] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
             const [spamPayload, setSpamPayload] = React.useState('');
             const [payloadProfile, setPayloadProfile] = React.useState('alpha');
@@ -72,6 +73,35 @@
                 return () => clearInterval(interval);
             }, [isLoggedIn]);
 
+            // Set initial alpha profile payload on load
+            React.useEffect(() => {
+                if(payloadProfile === 'alpha') {
+                    setSpamPayload(
+                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻"
+                    );
+                }
+            }, []);
+
             const handleLogin = (e) => {
                 e.preventDefault();
                 setIsLoggedIn(true);
@@ -113,9 +143,9 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         type: 'spam', session_id: node.sessionid, username: node.username,
-                        thread_id: spamThread, jitter: spamJitter, payload: spamPayload.split('\n')
+                        thread_id: spamThread, target: spamTargetName, jitter: spamJitter, payload: spamPayload.split('\n')
                     })
-                }).then(()=>alert('Task Launched!'));
+                }).then(()=>alert('Campaign Launched with Target Replacement!'));
             };
 
             const startNcLock = () => {
@@ -309,6 +339,12 @@
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Target Thread / Group ID</label>
                                         <input type="text" placeholder="e.g. 3402823668..." value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
                                     </div>
+
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Target Username (For &#123;target&#125; replacement)</label>
+                                        <input type="text" placeholder="e.g. target_username" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                    </div>
+
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Delay Interval (Seconds)</label>
                                         <input type="text" placeholder="3.5" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
@@ -347,15 +383,10 @@
                                                         "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻"
                                                     );
                                                 }
-                                                else if (val === 'beta') {
-                                                    setSpamPayload("Beta profile ka message 1\nBeta profile ka message 2");
-                                                }
-                                                else if (val === 'gamma') {
-                                                    setSpamPayload("Gamma style message line 1\nGamma style message line 2");
-                                                }
-                                                else if (val === 'delta') {
-                                                    setSpamPayload("Unicode flood line 1 ⚡\nUnicode flood line 2 🔥");
-                                                }
+                                                else if (val === 'beta') setSpamPayload("Beta profile message 1\nBeta profile message 2");
+                                                else if (val === 'gamma') setSpamPayload("Gamma style message 1\nGamma style message 2");
+                                                else if (val === 'delta') setSpamPayload("Unicode flood 1 ⚡\nUnicode flood 2 🔥");
+                                                else if (val === 'custom') setSpamPayload(""); // Blank for custom typing
                                             }} 
                                             className="bg-black border border-neutral-800 rounded p-3 text-xs w-full text-red-400 font-bold outline-none"
                                         >
@@ -395,8 +426,8 @@
                                     )}
 
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Message Payload Lines</label>
-                                        <textarea rows="5" placeholder="Messages..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white font-mono"></textarea>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Message Payload Lines / Custom Text</label>
+                                        <textarea rows="5" placeholder="Select 'Custom Operator Lines' to type your custom message with &#123;target&#125;..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white font-mono"></textarea>
                                     </div>
                                     <button onClick={startSpam} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">Launch Campaign</button>
                                 </div>
