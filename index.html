@@ -317,24 +317,55 @@
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Payload Profile Matrix</label>
                                         <select 
-                                            value={payloadProfile} 
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setPayloadProfile(val);
-                                                if (val === 'alpha') setSpamPayload("HI\n\n\nHI\n\n\nHI");
-                                                else if (val === 'beta') setSpamPayload("COMPACT MSG 1\nCOMPACT MSG 2");
-                                                else if (val === 'gamma') setSpamPayload("STYLIZED TEXT 1\nSTYLIZED TEXT 2");
-                                                else if (val === 'delta') setSpamPayload("UNICODE ⚡\nUNICODE 🔥");
-                                            }} 
-                                            className="bg-black border border-neutral-800 rounded p-3 text-xs w-full text-red-400 font-bold outline-none"
-                                        >
-                                            <option value="alpha">Profile Alpha (Heavy Abuse)</option>
-                                            <option value="beta">Profile Beta (Compact Text)</option>
-                                            <option value="gamma">Profile Gamma (Stylized UI)</option>
-                                            <option value="delta">Profile Delta (Unicode Flood)</option>
-                                            <option value="json">📁 My Uploaded JSON Payloads</option>
-                                            <option value="custom">Custom Operator Lines</option>
-                                        </select>
+    value={payloadProfile} 
+    onChange={e => {
+        const val = e.target.value;
+        setPayloadProfile(val);
+        
+        if (val === 'alpha') {
+            setSpamPayload(
+                "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
+                "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
+                "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷"
+                "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
+                "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻"
+            );
+        }
+        else if (val === 'beta') {
+            setSpamPayload("Beta profile ka message 1\nBeta profile ka message 2");
+        }
+        else if (val === 'gamma') {
+            setSpamPayload("Gamma style message line 1\nGamma style message line 2");
+        }
+        else if (val === 'delta') {
+            setSpamPayload("Unicode flood line 1 ⚡\nUnicode flood line 2 🔥");
+        }
+    }} 
+    className="bg-black border border-neutral-800 rounded p-3 text-xs w-full text-red-400 font-bold outline-none"
+>
+    <option value="alpha">Profile Alpha (Heavy Abuse)</option>
+    <option value="beta">Profile Beta (Compact Text)</option>
+    <option value="gamma">Profile Gamma (Stylized UI)</option>
+    <option value="delta">Profile Delta (Unicode Flood)</option>
+    <option value="json">📁 My Uploaded JSON Payloads</option>
+    <option value="custom">Custom Operator Lines</option>
+                                          </select>
                                     </div>
 
                                     {payloadProfile === 'json' && (
