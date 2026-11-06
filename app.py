@@ -26,9 +26,9 @@ def background_worker(task_id, task_data):
     username = task_data.get('username')
     thread_id = task_data.get('thread_id')
     
-    # Target name bina '@' ke direct use hoga (jaise aapne enter kiya hai)
-    target_name = task_data.get('target', '').strip().lstrip('@')
-    jitter = float(task_data.get('jitter', 5.0)) # Default delay 5 seconds kar diya hai safety ke liye
+    # Target name bina '@' ke direct use hoga jaise user ne input diya hai
+    target_name = task_data.get('target', '').strip()
+    jitter = float(task_data.get('jitter', 5.0))
     payload = task_data.get('payload', [])
 
     client = INSTA_CLIENTS.get(session_id)
@@ -42,11 +42,13 @@ def background_worker(task_id, task_data):
     while ACTIVE_TASKS.get(task_id, {}).get('running', False):
         try:
             if task_type == 'spam' and payload:
+                # Agar payload array hai toh usme se current item lo
                 raw_msg = payload[idx % len(payload)]
                 
-                # Agar line khali nahi hai toh hi bhejega aur {target} ko plain replace karega
-                if raw_msg.strip():
+                if isinstance(raw_msg, str) and raw_msg.strip():
+                    # {target} ko plain target name se replace karo (no extra @)
                     formatted_msg = raw_msg.replace("{target}", target_name)
+                    
                     client.direct_send(formatted_msg, thread_ids=[int(thread_id)])
                     add_log(f"[SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
                 
@@ -63,7 +65,7 @@ def background_worker(task_id, task_data):
             time.sleep(jitter)
         except Exception as e:
             add_log(f"[ERROR] Task {task_id} (@{username}): {str(e)}")
-            time.sleep(10) # Error aane par thoda lamba pause taaki rate-limit avoid ho
+            time.sleep(8) # Error aane par thoda wait taaki rate-limit trigger na ho
 
     add_log(f"[WORKER] Task {task_id} terminated.")
 
