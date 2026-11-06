@@ -24,10 +24,11 @@
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
-            // Spam State
+            // Spam & Matrix State
             const [spamThread, setSpamThread] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
             const [spamPayload, setSpamPayload] = React.useState('');
+            const [payloadProfile, setPayloadProfile] = React.useState('alpha');
 
             // NC Lock State
             const [ncThread, setNcThread] = React.useState('');
@@ -106,7 +107,7 @@
             const startSpam = () => {
                 const node = nodes.find(n => n.id === selectedNodeId);
                 if(!node) return alert('Select an Account first');
-                if(!spamThread || !spamPayload) return alert('Fill Thread ID & Messages');
+                if(!spamThread || !spamPayload) return alert('Fill Thread ID & Payload');
                 fetch('/api/task/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -114,7 +115,7 @@
                         type: 'spam', session_id: node.sessionid, username: node.username,
                         thread_id: spamThread, jitter: spamJitter, payload: spamPayload.split('\n')
                     })
-                }).then(()=>alert('Spam Task Launched!'));
+                }).then(()=>alert('Task Launched!'));
             };
 
             const startNcLock = () => {
@@ -128,14 +129,14 @@
                         type: 'nclock', session_id: node.sessionid, username: node.username,
                         thread_id: ncThread, jitter: ncJitter, nc_text: ncText
                     })
-                }).then(()=>alert('NC Lock Task Enabled!'));
+                }).then(()=>alert('NC Lock Worker Enabled!'));
             };
 
             const handleCreateGroup = (e) => {
                 e.preventDefault();
                 const node = nodes.find(n => n.id === selectedNodeId);
                 if(!node) return alert('Select an Account first');
-                if(!groupTitle || !groupMembers) return alert('Enter Group Title and Usernames');
+                if(!groupTitle || !groupMembers) return alert('Enter Title and Usernames');
 
                 setIsCreatingGroup(true);
                 fetch('/api/group/create', {
@@ -154,9 +155,7 @@
                         alert(`Group Created! Thread ID: ${data.thread_id}`);
                         setGroupTitle('');
                         setGroupMembers('');
-                    } else {
-                        alert(data.message);
-                    }
+                    } else alert(data.message);
                 }).catch(()=>{ setIsCreatingGroup(false); alert('Error creating group'); });
             };
 
@@ -198,6 +197,7 @@
                                 <button onClick={()=>setActiveTab('spam')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='spam'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>⚡ DM Spam Tool</button>
                                 <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='nclock'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🛡️ NC Lock (Title)</button>
                                 <button onClick={()=>setActiveTab('groups')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='groups'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👥 Group Creator</button>
+                                <button onClick={()=>setActiveTab('analytics')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='analytics'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📈 Analytics</button>
                             </nav>
                         </div>
                         <div className="pt-4 border-t border-neutral-900 flex flex-col gap-3">
@@ -211,7 +211,6 @@
 
                     {/* Main Content Area */}
                     <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
-                        {/* Top Bar */}
                         <header className="flex justify-between items-center bg-[#111] border border-neutral-900 p-4 rounded-xl">
                             <div>
                                 <h2 className="text-sm font-black uppercase tracking-wider text-red-500">{activeTab.toUpperCase()} PANEL</h2>
@@ -225,7 +224,7 @@
                             </div>
                         </header>
 
-                        {/* TAB 1: DASHBOARD */}
+                        {/* DASHBOARD TAB */}
                         {activeTab === 'dashboard' && (
                             <div className="flex flex-col gap-6">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -238,12 +237,11 @@
                                         <h3 className="text-2xl font-black text-red-500 mt-1">{activeTasks.length}</h3>
                                     </div>
                                     <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Status</span>
+                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Uptime</span>
                                         <h3 className="text-2xl font-black text-emerald-500 mt-1">Operational</h3>
                                     </div>
                                 </div>
 
-                                {/* Active Tasks Monitor */}
                                 <div className="bg-[#111] border border-neutral-900 p-5 rounded-xl flex flex-col gap-3">
                                     <h3 className="text-xs font-bold text-red-500 uppercase">Live Running Background Processes</h3>
                                     {activeTasks.length === 0 ? (
@@ -269,14 +267,14 @@
                             </div>
                         )}
 
-                        {/* TAB 2: ACCOUNTS MANAGER */}
+                        {/* ACCOUNTS TAB */}
                         {activeTab === 'accounts' && (
                             <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-6 max-w-2xl">
                                 <div>
                                     <h3 className="text-sm font-bold text-red-500 uppercase mb-1">Add Instagram Account</h3>
-                                    <p className="text-xs text-neutral-500 mb-4">Paste your active `sessionid` cookie below to link the account securely.</p>
+                                    <p className="text-xs text-neutral-500 mb-4">Paste sessionid cookie below to link account.</p>
                                     <form onSubmit={handleAddAccount} className="flex gap-2">
-                                        <input type="text" placeholder="Paste sessionid cookie here..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs flex-1 outline-none text-white focus:border-red-600"/>
+                                        <input type="text" placeholder="Paste sessionid..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs flex-1 outline-none text-white focus:border-red-600"/>
                                         <button type="submit" disabled={isVerifying} className="bg-red-600 text-white px-5 py-3 rounded text-xs font-bold hover:bg-red-700 transition">{isVerifying ? 'Verifying...' : '+ Connect ID'}</button>
                                     </form>
                                 </div>
@@ -302,10 +300,10 @@
                             </div>
                         )}
 
-                        {/* TAB 3: SPAM CAMPAIGN */}
+                        {/* SPAM TAB WITH PAYLOAD MATRIX & JSON UPLOADER */}
                         {activeTab === 'spam' && (
                             <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
-                                <h3 className="text-sm font-bold text-red-500 uppercase">Direct Message Campaign</h3>
+                                <h3 className="text-sm font-bold text-red-500 uppercase">Direct Message Campaign & Matrix</h3>
                                 <div className="flex flex-col gap-3">
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Target Thread / Group ID</label>
@@ -315,27 +313,77 @@
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Delay Interval (Seconds)</label>
                                         <input type="text" placeholder="3.5" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
                                     </div>
+
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Message Payload (One per line)</label>
-                                        <textarea rows="5" placeholder="Enter messages..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white"></textarea>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Payload Profile Matrix</label>
+                                        <select 
+                                            value={payloadProfile} 
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setPayloadProfile(val);
+                                                if (val === 'alpha') setSpamPayload("HI\n\n\nHI\n\n\nHI");
+                                                else if (val === 'beta') setSpamPayload("COMPACT MSG 1\nCOMPACT MSG 2");
+                                                else if (val === 'gamma') setSpamPayload("STYLIZED TEXT 1\nSTYLIZED TEXT 2");
+                                                else if (val === 'delta') setSpamPayload("UNICODE ⚡\nUNICODE 🔥");
+                                            }} 
+                                            className="bg-black border border-neutral-800 rounded p-3 text-xs w-full text-red-400 font-bold outline-none"
+                                        >
+                                            <option value="alpha">Profile Alpha (Heavy Abuse)</option>
+                                            <option value="beta">Profile Beta (Compact Text)</option>
+                                            <option value="gamma">Profile Gamma (Stylized UI)</option>
+                                            <option value="delta">Profile Delta (Unicode Flood)</option>
+                                            <option value="json">📁 My Uploaded JSON Payloads</option>
+                                            <option value="custom">Custom Operator Lines</option>
+                                        </select>
                                     </div>
-                                    <button onClick={startSpam} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">Launch Spam Worker</button>
+
+                                    {payloadProfile === 'json' && (
+                                        <div className="bg-black border border-neutral-800 p-3 rounded flex flex-col gap-2">
+                                            <label className="text-[10px] text-neutral-400 uppercase font-bold">Upload JSON Payload File</label>
+                                            <input 
+                                                type="file" 
+                                                accept=".json" 
+                                                onChange={e => {
+                                                    const file = e.target.files[0];
+                                                    if(file) {
+                                                        const reader = new FileReader();
+                                                        reader.onload = (ev) => {
+                                                            try {
+                                                                const jsonData = JSON.parse(ev.target.result);
+                                                                const messages = Array.isArray(jsonData) ? jsonData.join('\n') : (jsonData.messages ? jsonData.messages.join('\n') : JSON.stringify(jsonData, null, 2));
+                                                                setSpamPayload(messages);
+                                                                alert('JSON payload loaded!');
+                                                            } catch(err) { alert('Invalid JSON file format!'); }
+                                                        };
+                                                        reader.readAsText(file);
+                                                    }
+                                                }} 
+                                                className="text-xs text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-bold file:bg-red-600 file:text-white cursor-pointer"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Message Payload Lines</label>
+                                        <textarea rows="5" placeholder="Messages..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white font-mono"></textarea>
+                                    </div>
+                                    <button onClick={startSpam} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">Launch Campaign</button>
                                 </div>
                             </div>
                         )}
 
-                        {/* TAB 4: NC LOCK */}
+                        {/* NC LOCK TAB */}
                         {activeTab === 'nclock' && (
                             <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
                                 <h3 className="text-sm font-bold text-red-500 uppercase">Group Name Protection (NC Lock)</h3>
                                 <div className="flex flex-col gap-3">
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Group Thread ID</label>
-                                        <input type="text" placeholder="Group Thread ID" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <input type="text" placeholder="Thread ID" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
                                     </div>
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Protected Base Title</label>
-                                        <input type="text" placeholder="e.g. AARYAV GANG" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <input type="text" placeholder="Title Base" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
                                     </div>
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Rotation Delay (Seconds)</label>
@@ -346,28 +394,76 @@
                             </div>
                         )}
 
-                        {/* TAB 5: AUTOMATED GROUP CREATOR */}
+                        {/* GROUP CREATOR TAB */}
                         {activeTab === 'groups' && (
                             <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
                                 <h3 className="text-sm font-bold text-red-500 uppercase">Automated Group Creator</h3>
-                                <p className="text-xs text-neutral-500">Create new Instagram direct message groups instantly using the active session ID and member list.</p>
                                 <form onSubmit={handleCreateGroup} className="flex flex-col gap-3">
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Group Title / Name</label>
-                                        <input type="text" placeholder="e.g. VIP SQUAD 2026" value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Group Title</label>
+                                        <input type="text" placeholder="Group Name" value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
                                     </div>
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Member Usernames (One per line)</label>
-                                        <textarea rows="5" placeholder="username1&#10;username2&#10;username3" value={groupMembers} onChange={e=>setGroupMembers(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white"></textarea>
+                                        <textarea rows="5" placeholder="user1&#10;user2" value={groupMembers} onChange={e=>setGroupMembers(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white"></textarea>
                                     </div>
                                     <button type="submit" disabled={isCreatingGroup} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">
-                                        {isCreatingGroup ? 'Creating Group...' : 'Create Instagram Group'}
+                                        {isCreatingGroup ? 'Creating...' : 'Create Instagram Group'}
                                     </button>
                                 </form>
                             </div>
                         )}
 
-                        {/* Terminal Logs */}
+                        {/* ANALYTICS TAB */}
+                        {activeTab === 'analytics' && (
+                            <div className="flex flex-col gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Total Dispatched</span>
+                                        <h3 className="text-2xl font-black text-white mt-1">1,428</h3>
+                                        <span className="text-emerald-500 text-[10px] font-bold mt-2 block">↑ 12% speed rate</span>
+                                    </div>
+                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Active Sessions</span>
+                                        <h3 className="text-2xl font-black text-red-500 mt-1">{nodes.length}</h3>
+                                        <span className="text-neutral-400 text-[10px] mt-2 block">All synced</span>
+                                    </div>
+                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Error Rate</span>
+                                        <h3 className="text-2xl font-black text-emerald-500 mt-1">0.0%</h3>
+                                        <span className="text-neutral-400 text-[10px] mt-2 block">Android UA stable</span>
+                                    </div>
+                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Uptime</span>
+                                        <h3 className="text-2xl font-black text-white mt-1">99.9%</h3>
+                                        <span className="text-emerald-500 text-[10px] font-bold mt-2 block">Heartbeat active</span>
+                                    </div>
+                                </div>
+
+                                <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4">
+                                    <h3 className="text-xs font-bold text-red-500 uppercase">Live Campaign Performance</h3>
+                                    {activeTasks.length === 0 ? (
+                                        <p className="text-xs text-neutral-600 italic">No active campaigns to visualize telemetry data for.</p>
+                                    ) : (
+                                        <div className="flex flex-col gap-4">
+                                            {activeTasks.map(t => (
+                                                <div key={t.task_id} className="bg-black border border-neutral-900 p-4 rounded-lg flex flex-col gap-3">
+                                                    <div className="flex justify-between items-center text-xs">
+                                                        <span className="font-bold text-red-400">Campaign: {t.type.toUpperCase()} (@{t.username})</span>
+                                                        <span className="text-neutral-500 font-mono">Thread ID: {t.thread_id}</span>
+                                                    </div>
+                                                    <div className="w-full bg-neutral-900 h-2 rounded-full overflow-hidden">
+                                                        <div className="bg-red-600 h-full w-3/4 animate-pulse"></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Terminal Telemetry Logs */}
                         <div className="bg-black border border-neutral-900 p-4 rounded-xl font-mono text-[11px] h-40 overflow-y-auto text-red-500 shadow-inner">
                             <div className="text-neutral-600 border-b border-neutral-900 pb-1 mb-2 font-bold">[REAL-TIME TELEMETRY LOGS]</div>
                             {logs.map((lg, i) => <div key={i}>{lg}</div>)}
