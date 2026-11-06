@@ -48,7 +48,6 @@ def background_worker(task_id, task_data):
                     # {target} ko plain target name se replace karo (no extra @)
                     formatted_msg = raw_msg.replace("{target}", target_name)
                     
-                    # Direct send using thread_id string/list format
                     client.direct_send(formatted_msg, thread_ids=[thread_id])
                     add_log(f"[SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
                 
@@ -59,12 +58,26 @@ def background_worker(task_id, task_data):
                 nc_text = task_data.get('nc_text', '')
                 new_title = f"{nc_text} {current_emoji}"
                 
-                try:
-                    # Working script wala exact clean method (thread_id as string)
-                    client.direct_thread_update_title(thread_id, new_title)
-                    add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
-                except Exception as inner_e:
-                    add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
+                success = False
+                # Multiple payload parameters try karega taaki parameter error solve ho jaye
+                for payload_data in [{"title": new_title}, {"thread_title": new_title}, {"name": new_title}]:
+                    try:
+                        client.private_request(
+                            f"direct_v2/threads/{thread_id}/update_title/",
+                            data=payload_data
+                        )
+                        success = True
+                        add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
+                        break
+                    except Exception:
+                        continue
+                
+                if not success:
+                    try:
+                        client.direct_thread_update_title(thread_id, new_title)
+                        add_log(f"[NC LOCK (Fallback)] @{username} -> Title: {new_title}")
+                    except Exception as inner_e:
+                        add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
                 
                 idx += 1
             
