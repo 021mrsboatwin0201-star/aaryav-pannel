@@ -25,8 +25,10 @@ def background_worker(task_id, task_data):
     session_id = task_data.get('session_id')
     username = task_data.get('username')
     thread_id = task_data.get('thread_id')
-    target_name = task_data.get('target', '')
-    jitter = float(task_data.get('jitter', 3.5))
+    
+    # Target name bina '@' ke direct use hoga (jaise aapne enter kiya hai)
+    target_name = task_data.get('target', '').strip().lstrip('@')
+    jitter = float(task_data.get('jitter', 5.0)) # Default delay 5 seconds kar diya hai safety ke liye
     payload = task_data.get('payload', [])
 
     client = INSTA_CLIENTS.get(session_id)
@@ -41,10 +43,13 @@ def background_worker(task_id, task_data):
         try:
             if task_type == 'spam' and payload:
                 raw_msg = payload[idx % len(payload)]
-                # Replace {target} with @target_name if provided
-                formatted_msg = raw_msg.replace("{target}", f"@{target_name}" if target_name else "")
-                client.direct_send(formatted_msg, thread_ids=[int(thread_id)])
-                add_log(f"[SPAM SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
+                
+                # Agar line khali nahi hai toh hi bhejega aur {target} ko plain replace karega
+                if raw_msg.strip():
+                    formatted_msg = raw_msg.replace("{target}", target_name)
+                    client.direct_send(formatted_msg, thread_ids=[int(thread_id)])
+                    add_log(f"[SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
+                
                 idx += 1
             elif task_type == 'nclock':
                 emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
@@ -58,7 +63,7 @@ def background_worker(task_id, task_data):
             time.sleep(jitter)
         except Exception as e:
             add_log(f"[ERROR] Task {task_id} (@{username}): {str(e)}")
-            time.sleep(5)
+            time.sleep(10) # Error aane par thoda lamba pause taaki rate-limit avoid ho
 
     add_log(f"[WORKER] Task {task_id} terminated.")
 
