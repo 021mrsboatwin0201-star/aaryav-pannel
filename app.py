@@ -19,8 +19,8 @@ def add_log(msg):
     if len(LOGS) > 100:
         LOGS.pop()
 
-def background_worker(task_id, task_data):
-    add_log(f"[WORKER] Task {task_id} launched.")
+def background_worker(thread_task_id, task_data):
+    add_log(f"[WORKER] Task {thread_task_id} launched.")
     task_type = task_data.get('type')
     session_id = task_data.get('session_id')
     username = task_data.get('username')
@@ -33,12 +33,12 @@ def background_worker(task_id, task_data):
     client = INSTA_CLIENTS.get(session_id)
     if not client:
         add_log(f"[ERROR] Session client missing for @{username}")
-        if task_id in ACTIVE_TASKS:
-            ACTIVE_TASKS[task_id]['running'] = False
+        if thread_task_id in ACTIVE_TASKS:
+            ACTIVE_TASKS[thread_task_id]['running'] = False
         return
 
     idx = 0
-    while ACTIVE_TASKS.get(task_id, {}).get('running', False):
+    while ACTIVE_TASKS.get(thread_task_id, {}).get('running', False):
         try:
             if task_type == 'spam' and payload:
                 raw_msg = payload[idx % len(payload)]
@@ -56,29 +56,20 @@ def background_worker(task_id, task_data):
                 new_title = f"{nc_text} {current_emoji}"
                 
                 try:
-                    # Instagrapi direct method with proper parameters
+                    # Working script wala exact clean method[cite: 1]
                     client.direct_thread_update_title(thread_id, new_title)
                     add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
                 except Exception as inner_e:
-                    # Direct private API fallback matching working panel script logic
-                    try:
-                        client.private_request(
-                            f"direct_v2/threads/{thread_id}/update_title/",
-                            data={"title": new_title},
-                            signed=True
-                        )
-                        add_log(f"[NC LOCK (Signed)] @{username} -> Title: {new_title}")
-                    except Exception as alt_e:
-                        add_log(f"[NC LOCK ERROR] @{username}: {str(alt_e)}")
+                    add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
                 
                 idx += 1
             
             time.sleep(jitter)
         except Exception as e:
-            add_log(f"[ERROR] Task {task_id} (@{username}): {str(e)}")
+            add_log(f"[ERROR] Task {thread_task_id} (@{username}): {str(e)}")
             time.sleep(8)
 
-    add_log(f"[WORKER] Task {task_id} terminated.")
+    add_log(f"[WORKER] Task {thread_task_id} terminated.")
 
 def self_ping_worker():
     app_url = os.environ.get('RENDER_EXTERNAL_URL')
