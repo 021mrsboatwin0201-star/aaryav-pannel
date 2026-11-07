@@ -35,11 +35,11 @@ def verify_account():
 
     try:
         cl = Client()
-        # Custom User-Agent and headers to bypass strict block
         cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
-        cl.set_sessionid(sessionid)
         
-        # Verify by fetching account info
+        # Fixed for modern instagrapi versions
+        cl.login_by_sessionid(sessionid)
+        
         account_info = cl.account_info()
         username = account_info.username
         
@@ -68,7 +68,7 @@ def start_task():
             try:
                 cl = Client()
                 cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
-                cl.set_sessionid(session_id)
+                cl.login_by_sessionid(session_id)
                 add_log(f"[@{username}] Started DM Spam task on thread {thread_id}")
                 
                 while task_id in active_tasks:
@@ -103,7 +103,7 @@ def start_task():
             try:
                 cl = Client()
                 cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
-                cl.set_sessionid(session_id)
+                cl.login_by_sessionid(session_id)
                 add_log(f"[@{username}] Started NC Lock on thread {thread_id}")
                 counter = 1
                 while task_id in active_tasks:
@@ -151,7 +151,7 @@ def create_group():
     try:
         cl = Client()
         cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
-        cl.set_sessionid(session_id)
+        cl.login_by_sessionid(session_id)
         user_ids = [cl.user_id_from_username(u.strip()) for u in usernames if u.strip()]
         thread = cl.direct_create_group(user_ids, title)
         add_log(f"Created Group '{title}' with ID: {thread.id}")
