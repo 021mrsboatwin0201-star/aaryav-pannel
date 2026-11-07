@@ -24,12 +24,20 @@
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
+            // In-UI Status Notification System (No Alert Popups)
+            const [statusMsg, setStatusMsg] = React.useState(null);
+
+            const showNotify = (text, type = 'info') => {
+                setStatusMsg({ text, type });
+                setTimeout(() => setStatusMsg(null), 4000);
+            };
+
             // Spam & Matrix State
             const [spamThread, setSpamThread] = React.useState('');
             const [spamTargetName, setSpamTargetName] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
             const [spamPayload, setSpamPayload] = React.useState('');
-            const [payloadProfile, setPayloadProfile] = React.useState('alpha');
+            const [payloadProfile, setPayloadProfile] = React.useState('Aws users');
 
             // NC Lock State
             const [ncThread, setNcThread] = React.useState('');
@@ -73,26 +81,14 @@
                 return () => clearInterval(interval);
             }, [isLoggedIn]);
 
-            // Set initial alpha profile payload on load
+            // Set initial payload on load
             React.useEffect(() => {
-                if(payloadProfile === 'alpha') {
+                if(payloadProfile === 'Aws users') {
                     setSpamPayload(
                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
+                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
                     );
                 }
             }, []);
@@ -105,7 +101,7 @@
 
             const handleAddAccount = (e) => {
                 e.preventDefault();
-                if(!inputSessionId.trim()) return alert('Enter Session ID');
+                if(!inputSessionId.trim()) return showNotify('Enter Session ID', 'error');
                 setIsVerifying(true);
                 fetch('/api/account/verify', {
                     method: 'POST',
@@ -120,19 +116,20 @@
                         setNodes(prev => [...prev, newItem]);
                         setSelectedNodeId(newItem.id);
                         setInputSessionId('');
-                        alert(`Connected @${data.username}`);
-                    } else alert(data.message);
-                }).catch(()=>{ setIsVerifying(false); alert('Network Error'); });
+                        showNotify(`Connected @${data.username}`, 'success');
+                    } else showNotify(data.message, 'error');
+                }).catch(()=>{ setIsVerifying(false); showNotify('Network Error', 'error'); });
             };
 
             const removeAccount = (id) => {
                 setNodes(prev => prev.filter(n => n.id !== id));
+                showNotify('Account removed', 'info');
             };
 
             const startSpam = () => {
                 const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select an Account first');
-                if(!spamThread || !spamPayload) return alert('Fill Thread ID & Payload');
+                if(!node) return showNotify('Select an Account first', 'error');
+                if(!spamThread || !spamPayload) return showNotify('Fill Thread ID & Payload', 'error');
                 
                 fetch('/api/task/start', {
                     method: 'POST',
@@ -146,13 +143,13 @@
                         jitter: spamJitter, 
                         payload: [spamPayload] 
                     })
-                }).then(()=>alert('Campaign Launched with Multiline Payload! 🔥'));
+                }).then(()=>showNotify('Campaign Launched with Multiline Payload! 🔥', 'success'));
             };
 
             const startNcLock = () => {
                 const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select an Account first');
-                if(!ncThread || !ncText) return alert('Fill Thread ID & Title Base');
+                if(!node) return showNotify('Select an Account first', 'error');
+                if(!ncThread || !ncText) return showNotify('Fill Thread ID & Title Base', 'error');
                 fetch('/api/task/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -160,14 +157,14 @@
                         type: 'nclock', session_id: node.sessionid, username: node.username,
                         thread_id: ncThread, jitter: ncJitter, nc_text: ncText
                     })
-                }).then(()=>alert('NC Lock Worker Enabled!'));
+                }).then(()=>showNotify('NC Lock Worker Enabled!', 'success'));
             };
 
             const handleCreateGroup = (e) => {
                 e.preventDefault();
                 const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select an Account first');
-                if(!groupTitle || !groupMembers) return alert('Enter Title and Usernames');
+                if(!node) return showNotify('Select an Account first', 'error');
+                if(!groupTitle || !groupMembers) return showNotify('Enter Title and Usernames', 'error');
 
                 setIsCreatingGroup(true);
                 fetch('/api/group/create', {
@@ -183,18 +180,18 @@
                 .then(data => {
                     setIsCreatingGroup(false);
                     if(data.status === 'success') {
-                        alert(`Group Created! Thread ID: ${data.thread_id}`);
+                        showNotify(`Group Created! Thread ID: ${data.thread_id}`, 'success');
                         setGroupTitle('');
                         setGroupMembers('');
-                    } else alert(data.message);
-                }).catch(()=>{ setIsCreatingGroup(false); alert('Error creating group'); });
+                    } else showNotify(data.message, 'error');
+                }).catch(()=>{ setIsCreatingGroup(false); showNotify('Error creating group', 'error'); });
             };
 
             const stopTask = (tid) => {
                 fetch('/api/task/stop', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ task_id: tid })
-                });
+                }).then(() => showNotify('Task Terminated', 'info'));
             };
 
             if(!isLoggedIn) {
@@ -242,6 +239,13 @@
 
                     {/* Main Content Area */}
                     <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
+                        {statusMsg && (
+                            <div className={`p-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition ${statusMsg.type === 'error' ? 'bg-red-950 border border-red-800 text-red-200' : statusMsg.type === 'success' ? 'bg-emerald-950 border border-emerald-800 text-emerald-200' : 'bg-neutral-900 border border-neutral-700 text-neutral-200'}`}>
+                                <span>{statusMsg.text}</span>
+                                <button onClick={()=>setStatusMsg(null)} className="text-xs opacity-60 hover:opacity-100">✕</button>
+                            </div>
+                        )}
+
                         <header className="flex justify-between items-center bg-[#111] border border-neutral-900 p-4 rounded-xl">
                             <div>
                                 <h2 className="text-sm font-black uppercase tracking-wider text-red-500">{activeTab.toUpperCase()} PANEL</h2>
@@ -287,9 +291,7 @@
                                                         <span className="text-neutral-500">Thread: {t.thread_id}</span>
                                                         <span className="text-neutral-600 text-[10px]">({t.started_at})</span>
                                                     </div>
-                                                    <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase transition">
-                                                        Terminate
-                                                    </button>
+                                                    <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase transition">Terminate</button>
                                                 </div>
                                             ))}
                                         </div>
@@ -359,29 +361,29 @@
                                                 const val = e.target.value;
                                                 setPayloadProfile(val);
                                                 
-                                                if (val === 'alpha') {
+                                                if (val === 'Aws users') {
                                                     setSpamPayload(
                                                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
+                                                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
                                                     );
                                                 }
-                                                else if (val === 'beta') {
+                                                else if (val === 'Bada ho') {
                                                     setSpamPayload(
-                                                       "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
+                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
@@ -399,7 +401,7 @@
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>"
                                                     );
                                                 }
-                                                else if (val === 'gamma') {
+                                                else if (val === 'Run') {
                                                     setSpamPayload(
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
@@ -416,17 +418,14 @@
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏"
                                                     );
                                                 }
-                                                else if (val === 'delta') {
+                                                else if (val === 'tmkc') {
                                                     setSpamPayload(
                                                         "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" +
                                                         "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" +
                                                         "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤"
                                                     );
                                                 }
-                                                else if (val === 'json') {
-                                                    setSpamPayload("");
-                                                }
-                                                else if (val === 'custom') {
+                                                else if (val === 'json' || val === 'custom') {
                                                     setSpamPayload(""); 
                                                 }
                                             }} 
@@ -456,8 +455,8 @@
                                                                 const jsonData = JSON.parse(ev.target.result);
                                                                 const messages = Array.isArray(jsonData) ? jsonData.join('\n\n') : (jsonData.messages ? jsonData.messages.join('\n\n') : JSON.stringify(jsonData, null, 2));
                                                                 setSpamPayload(messages);
-                                                                alert('JSON payload loaded successfully!');
-                                                            } catch(err) { alert('Invalid JSON file format!'); }
+                                                                showNotify('JSON payload loaded!', 'success');
+                                                            } catch(err) { showNotify('Invalid JSON file format!', 'error'); }
                                                         };
                                                         reader.readAsText(file);
                                                     }
