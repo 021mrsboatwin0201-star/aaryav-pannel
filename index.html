@@ -6,14 +6,10 @@
     <title>AIMDOG // Chainsaw Devil Hunter Command</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Space+Grotesk:wght@500;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #070303; color: #f3f4f6; overflow-x: hidden; }
         .chainsaw-font { font-family: 'Cinzel', serif; }
         .sub-font { font-family: 'Space Grotesk', sans-serif; }
-        
         .csm-card {
             background: rgba(18, 6, 6, 0.88);
             backdrop-filter: blur(12px);
@@ -22,7 +18,6 @@
         }
         .chainsaw-glow-red { box-shadow: 0 0 20px rgba(220, 38, 38, 0.6); }
         .chainsaw-glow-orange { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); }
-        
         canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #070303; }
@@ -31,449 +26,472 @@
 </head>
 <body class="bg-[#070303] text-white font-sans antialiased">
     <canvas id="bgCanvas"></canvas>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        function App() {
-            const [isLoggedIn, setIsLoggedIn] = React.useState(false);
-            const [loginUser, setLoginUser] = React.useState('');
-            const [loginPass, setLoginPass] = React.useState('');
-            
-            const [activeTab, setActiveTab] = React.useState('dashboard');
-            const [nodes, setNodes] = React.useState([]);
-            const [selectedNodeId, setSelectedNodeId] = React.useState('');
-            const [inputSessionId, setInputSessionId] = React.useState('');
-            const [isVerifying, setIsVerifying] = React.useState(false);
-
-            // Spam & Matrix State (Instagrapi)
-            const [spamThread, setSpamThread] = React.useState('');
-            const [spamTargetName, setSpamTargetName] = React.useState('');
-            const [spamJitter, setSpamJitter] = React.useState('3.5');
-            const [spamPayload, setSpamPayload] = React.useState('');
-            const [payloadProfile, setPayloadProfile] = React.useState('alpha');
-
-            // NC Lock State
-            const [ncThread, setNcThread] = React.useState('');
-            const [ncText, setNcText] = React.useState('');
-            const [ncJitter, setNcJitter] = React.useState('4.0');
-
-            // Group Creator State
-            const [groupTitle, setGroupTitle] = React.useState('');
-            const [groupMembers, setGroupMembers] = React.useState('');
-            const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
-
-            // Playwright Blitz State
-            const [pwUrl, setPwUrl] = React.useState('');
-            const [pwTarget, setPwTarget] = React.useState('target');
-            const [pwUsername, setPwUsername] = React.useState('playwright_user');
-            const [pwProfileDir, setPwProfileDir] = React.useState('acc_1');
-
-            const [activeTasks, setActiveTasks] = React.useState([]);
-            const [logs, setLogs] = React.useState([]);
-
-            React.useEffect(() => {
-                if(localStorage.getItem('panel_logged') === 'true') setIsLoggedIn(true);
-                const saved = localStorage.getItem('panel_nodes');
-                if(saved) {
-                    try {
-                        const parsed = JSON.parse(saved);
-                        setNodes(parsed);
-                        if(parsed.length > 0) setSelectedNodeId(parsed[0].id);
-                    } catch(e){}
-                }
-            }, []);
-
-            React.useEffect(() => {
-                if(nodes.length > 0) localStorage.setItem('panel_nodes', JSON.stringify(nodes));
-            }, [nodes]);
-
-            React.useEffect(() => {
-                if(!isLoggedIn) return;
-                const interval = setInterval(() => {
-                    fetch('/api/tasks/active')
-                    .then(res => res.json())
-                    .then(data => {
-                        if(data.tasks) setActiveTasks(data.tasks);
-                        if(data.logs) setLogs(data.logs);
-                    }).catch(()=>{});
-                }, 2000);
-                return () => clearInterval(interval);
-            }, [isLoggedIn]);
-
-            React.useEffect(() => {
-                if(payloadProfile === 'alpha') {
-                    setSpamPayload(
-                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻"
-                    );
-                }
-            }, []);
-
-            const handleLogin = (e) => {
-                e.preventDefault();
-                setIsLoggedIn(true);
-                localStorage.setItem('panel_logged', 'true');
-            };
-
-            const handleAddAccount = (e) => {
-                e.preventDefault();
-                if(!inputSessionId.trim()) return alert('Enter Session ID');
-                setIsVerifying(true);
-                fetch('/api/account/verify', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ sessionid: inputSessionId.trim() })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    setIsVerifying(false);
-                    if(data.status === 'success') {
-                        const newItem = { id: Date.now().toString(), username: data.username, sessionid: data.sessionid };
-                        setNodes(prev => [...prev, newItem]);
-                        setSelectedNodeId(newItem.id);
-                        setInputSessionId('');
-                        alert(`Devil Contract Bound: @${data.username}`);
-                    } else alert(data.message);
-                }).catch(()=>{ setIsVerifying(false); alert('Contract Failed: Network Error'); });
-            };
-
-            const removeAccount = (id) => {
-                const updated = nodes.filter(n => n.id !== id);
-                setNodes(updated);
-                if(selectedNodeId === id && updated.length > 0) {
-                    setSelectedNodeId(updated[0].id);
-                } else if(updated.length === 0) {
-                    setSelectedNodeId('');
-                }
-            };
-
-            const startSpam = () => {
-                const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select a Devil Hunter Account first');
-                if(!spamThread || !spamPayload) return alert('Fill Thread ID & Payload');
-                fetch('/api/task/start', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        type: 'spam', session_id: node.sessionid, username: node.username,
-                        thread_id: spamThread, target: spamTargetName, jitter: spamJitter, payload: spamPayload.split('\n')
-                    })
-                }).then(()=>alert('Chainsaw DM Blitz Triggered! 🔥'));
-            };
-
-            const startNcLock = () => {
-                const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select a Devil Hunter Account first');
-                if(!ncThread || !ncText) return alert('Fill Thread ID & Title Base');
-                fetch('/api/task/start', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        type: 'nclock', session_id: node.sessionid, username: node.username,
-                        thread_id: ncThread, jitter: ncJitter, nc_text: ncText
-                    })
-                }).then(()=>alert('Devil NC Lock Protocol Engaged! 🪚'));
-            };
-
-            const startPlaywrightBlitz = () => {
-                if(!pwUrl) return alert('Enter GC / DM Link or Thread ID');
-                fetch('/api/task/start', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        type: 'playwright_spam',
-                        url: pwUrl.startsWith("http") ? pwUrl : `https://www.instagram.com/direct/t/${pwUrl}`,
-                        target: pwTarget,
-                        username: pwUsername,
-                        profile_dir: pwProfileDir
-                    })
-                }).then(()=>alert('🚀 Playwright High-Speed Blitz Started!'));
-            };
-
-            const stopTask = (tid) => {
-                fetch('/api/task/stop', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ task_id: tid })
-                });
-            };
-
-            if(!isLoggedIn) {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-4">
-                        <form onSubmit={handleLogin} className="csm-card p-8 rounded-2xl w-full max-w-md flex flex-col gap-5 chainsaw-glow-red border-red-600/50 relative overflow-hidden">
-                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-600/20 rounded-full blur-2xl"></div>
-                            <div className="text-center">
-                                <div className="inline-flex p-3 rounded-full bg-gradient-to-br from-red-600 to-orange-600 mb-3 chainsaw-glow-orange">
-                                    <svg className="w-8 h-8 text-black animate-pulse" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M19.78 4.22a.75.75 0 00-1.06 0L14 8.94l-1.72-1.72a.75.75 0 00-1.06 1.06l1.72 1.72-6.19 6.19a.75.75 0 000 1.06l3.5 3.5a.75.75 0 001.06 0l6.19-6.19 1.72 1.72a.75.75 0 001.06-1.06L18.54 13.5l4.72-4.72a.75.75 0 000-1.06l-3.48-3.5z"/>
-                                    </svg>
-                                </div>
-                                <h1 className="chainsaw-font text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 uppercase">AARYAVxYASH</h1>
-                                <p className="sub-font text-xs text-red-400 mt-1 uppercase tracking-widest font-bold">🪚 Chainsaw Devil Hunter Command 🪚</p>
-                            </div>
-                            
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] sub-font font-bold text-gray-400 uppercase tracking-widest">Hunter Identity</label>
-                                    <input type="text" placeholder="Operator Tag" value={loginUser} onChange={e=>setLoginUser(e.target.value)} className="w-full mt-1 bg-black/80 border border-red-900/60 rounded-xl p-3 text-xs outline-none text-orange-400 focus:border-red-500 transition"/>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] sub-font font-bold text-gray-400 uppercase tracking-widest">Contract Key</label>
-                                    <input type="password" placeholder="Devil Passcode" value={loginPass} onChange={e=>setLoginPass(e.target.value)} className="w-full mt-1 bg-black/80 border border-red-900/60 rounded-xl p-3 text-xs outline-none text-orange-400 focus:border-red-500 transition"/>
-                                </div>
-                            </div>
-
-                            <button type="submit" className="py-3.5 bg-gradient-to-r from-red-700 via-red-600 to-orange-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest chainsaw-glow-red text-white sub-font">
-                                Pull Starter Cord (Enter)
-                            </button>
-                        </form>
-                    </div>
-                );
-            }
-
-            const activeNode = nodes.find(n => n.id === selectedNodeId);
-
-            return (
-                <div className="min-h-screen flex flex-col md:flex-row">
-                    {/* CSM Devil Hunter Sidebar */}
-                    <aside className="w-full md:w-64 csm-card border-r border-red-900/50 flex flex-col justify-between p-4 z-20">
-                        <div>
-                            <div className="py-4 px-2 mb-4 border-b border-red-900/40">
-                                <h1 className="chainsaw-font text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 tracking-widest uppercase">AARYAVxYASH</h1>
-                                <p className="text-[10px] text-orange-400 font-bold mt-1 flex items-center gap-1.5 sub-font">
-                                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span> CSM ENGINE ACTIVE
-                                </p>
-                            </div>
-                            <nav className="flex flex-col gap-2">
-                                <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='dashboard'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🩸 Dashboard</button>
-                                <button onClick={()=>setActiveTab('accounts')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='accounts'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>👤 Devil Vault</button>
-                                <button onClick={()=>setActiveTab('spam')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='spam'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🔥 DM Chainsaw Spam</button>
-                                <button onClick={()=>setActiveTab('playwright')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='playwright'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🚀 Playwright Blitz</button>
-                                <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='nclock'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🪚 NC Lock (Devil Title)</button>
-                                <button onClick={()=>setActiveTab('groups')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='groups'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>👥 Group Forge</button>
-                            </nav>
-                        </div>
-                        <div className="pt-4 border-t border-red-900/40 flex flex-col gap-3">
-                            <div className="bg-black/80 p-3 rounded-xl border border-red-600/30 text-[11px]">
-                                <span className="text-gray-500 block text-[10px] uppercase font-bold">Bound Devil Account:</span>
-                                <span className="text-orange-400 font-bold truncate block">{activeNode ? '@'+activeNode.username : 'No Contract Active'}</span>
-                            </div>
-                            <button onClick={()=>{setIsLoggedIn(false); localStorage.removeItem('panel_logged');}} className="bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/50 py-2.5 rounded-xl text-xs font-bold uppercase transition sub-font">Sever Contract (Logout)</button>
-                        </div>
-                    </aside>
-
-                    {/* Main Workspace Area */}
-                    <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full z-10">
-                        <header className="flex justify-between items-center csm-card p-4 rounded-2xl border-orange-600/30">
-                            <div>
-                                <h2 className="chainsaw-font text-base font-black uppercase tracking-widest text-orange-500">{activeTab.toUpperCase()} DEVIL MODULE</h2>
-                                <p className="text-xs text-gray-400 sub-font">Execute high-speed thread operations with Denji's power.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400 sub-font">Active Account:</span>
-                                <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-red-600/40 rounded-xl px-3 py-2 text-xs text-orange-400 font-bold outline-none">
-                                    {nodes.length === 0 ? <option>No Accounts Linked</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
-                                </select>
-                            </div>
-                        </header>
-
-                        {/* DASHBOARD TAB */}
-                        {activeTab === 'dashboard' && (
-                            <div className="flex flex-col gap-6">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="csm-card p-5 rounded-2xl border-red-600/40">
-                                        <span className="text-gray-400 text-xs uppercase font-bold sub-font">Linked Devil Accounts</span>
-                                        <h3 className="text-3xl font-black text-white mt-1 chainsaw-font">{nodes.length}</h3>
-                                    </div>
-                                    <div className="csm-card p-5 rounded-2xl border-orange-600/40">
-                                        <span className="text-gray-400 text-xs uppercase font-bold sub-font">Active Chainsaw Tasks</span>
-                                        <h3 className="text-3xl font-black text-orange-500 mt-1 chainsaw-font">{activeTasks.length}</h3>
-                                    </div>
-                                    <div className="csm-card p-5 rounded-2xl border-red-600/40">
-                                        <span className="text-gray-400 text-xs uppercase font-bold sub-font">Devil Power Uptime</span>
-                                        <h3 className="text-3xl font-black text-red-500 mt-1 chainsaw-font">100% BLOOD</h3>
-                                    </div>
-                                </div>
-
-                                <div className="csm-card p-6 rounded-2xl flex flex-col gap-3 border-red-600/30">
-                                    <h3 className="text-xs font-bold text-red-400 uppercase tracking-widest sub-font">Active Background Devil Processes</h3>
-                                    {activeTasks.length === 0 ? (
-                                        <p className="text-xs text-gray-500 italic">No chainsaw workers currently ripping through threads.</p>
-                                    ) : (
-                                        <div className="flex flex-col gap-2">
-                                            {activeTasks.map(t => (
-                                                <div key={t.task_id} className="flex justify-between items-center bg-black/80 p-3.5 border border-red-900/60 rounded-xl">
-                                                    <div className="text-xs flex items-center gap-3">
-                                                        <span className="bg-red-950 text-red-400 border border-red-700/50 font-bold px-2.5 py-0.5 rounded-lg text-[10px] sub-font">{t.type.toUpperCase()}</span>
-                                                        <span className="text-orange-300 font-bold">@{t.username}</span>
-                                                        <span className="text-gray-500 font-mono">Thread: {t.thread_id || t.url || 'N/A'}</span>
-                                                    </div>
-                                                    <button onClick={() => stopTask(t.task_id)} className="bg-red-900/80 hover:bg-red-700 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-lg uppercase transition sub-font">Terminate Task</button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* ACCOUNTS VAULT TAB */}
-                        {activeTab === 'accounts' && (
-                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-6 max-w-2xl border-red-600/40">
-                                <div>
-                                    <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase mb-1">Devil Contract Vault</h3>
-                                    <p className="text-xs text-gray-400 mb-4 sub-font">Bind session IDs to switch seamlessly between target accounts.</p>
-                                    <form onSubmit={handleAddAccount} className="flex gap-2">
-                                        <input type="text" placeholder="Paste sessionid cookie..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs flex-1 outline-none text-orange-400 focus:border-red-500 transition"/>
-                                        <button type="submit" disabled={isVerifying} className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-5 py-3 rounded-xl text-xs font-bold hover:opacity-95 transition sub-font">{isVerifying ? 'Binding Contract...' : '+ Bind Session ID'}</button>
-                                    </form>
-                                </div>
-
-                                <div className="border-t border-red-900/40 pt-4">
-                                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 sub-font">Bound Contract List</h3>
-                                    {nodes.length === 0 ? (
-                                        <p className="text-xs text-gray-500 italic">No active contracts bound yet.</p>
-                                    ) : (
-                                        <div className="flex flex-col gap-2">
-                                            {nodes.map(n => (
-                                                <div key={n.id} className="flex justify-between items-center bg-black/80 p-3.5 border border-red-900/60 rounded-xl">
-                                                    <div className="text-xs">
-                                                        <span className="text-orange-400 font-bold">@{n.username}</span>
-                                                        <span className="text-gray-500 ml-3 font-mono text-[10px]">ID: {n.id}</span>
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button onClick={()=>setSelectedNodeId(n.id)} className={`text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase transition sub-font ${selectedNodeId===n.id ? 'bg-orange-600 text-black' : 'bg-red-950/80 text-gray-300 hover:bg-red-900'}`}>{selectedNodeId===n.id ? 'Active' : 'Switch'}</button>
-                                                        <button onClick={()=>removeAccount(n.id)} className="bg-black hover:bg-red-950 text-red-500 text-[10px] font-bold px-3 py-1.5 rounded-lg transition border border-red-900/60">Sever</button>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* SPAM TAB (INSTAGRAPI) */}
-                        {activeTab === 'spam' && (
-                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-orange-600/40">
-                                <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase">Chainsaw DM Blitz Campaign</h3>
-                                <div className="flex flex-col gap-3">
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Thread ID</label>
-                                        <input type="text" placeholder="e.g. 2605643833284076" value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Name (For &#123;target&#125; replacement)</label>
-                                        <input type="text" placeholder="e.g. target_name" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Delay Interval (Seconds)</label>
-                                        <input type="text" placeholder="3.5" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Message Payload Lines</label>
-                                        <textarea rows="5" value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-300 font-mono"></textarea>
-                                    </div>
-                                    <button onClick={startSpam} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">
-                                        🪚 Unleash Chainsaw Blitz
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* PLAYWRIGHT BLITZ TAB */}
-                        {activeTab === 'playwright' && (
-                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-red-600/40">
-                                <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase">🚀 Playwright High-Speed Spammer</h3>
-                                <p className="text-xs text-gray-400 sub-font">Runs browser automation worker from your Python script to blast messages with zero rate-limit blocks.</p>
-                                <div className="flex flex-col gap-3">
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Thread URL or ID</label>
-                                        <input type="text" placeholder="https://www.instagram.com/direct/t/..." value={pwUrl} onChange={e=>setPwUrl(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Name (&#123;t&#125; replacement)</label>
-                                        <input type="text" placeholder="target" value={pwTarget} onChange={e=>setPwTarget(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Operator Tag / Username</label>
-                                        <input type="text" placeholder="playwright_user" value={pwUsername} onChange={e=>setPwUsername(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Profile Directory Folder</label>
-                                        <input type="text" placeholder="acc_1" value={pwProfileDir} onChange={e=>setPwProfileDir(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <button onClick={startPlaywrightBlitz} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">
-                                        🚀 Launch Playwright Worker
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* NC LOCK TAB */}
-                        {activeTab === 'nclock' && (
-                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-red-600/40">
-                                <h3 className="chainsaw-font text-base font-bold text-red-500 uppercase">NC Lock (Group Title Rotation)</h3>
-                                <p className="text-xs text-red-400/80 sub-font">⚠️ Do NOT use `<` in title base to prevent API parameters rejection.</p>
-                                <div className="flex flex-col gap-3">
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Thread ID</label>
-                                        <input type="text" placeholder="e.g. 2605643833284076" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Title Base (Clean text without `<`)</label>
-                                        <input type="text" placeholder="e.g. REHAND ON TOP" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Rotation Jitter (Seconds)</label>
-                                        <input type="text" placeholder="4.0" value={ncJitter} onChange={e=>setNcJitter(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <button onClick={startNcLock} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-red sub-font text-white">
-                                        🩸 Activate NC Lock Worker
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* GROUP CREATOR TAB */}
-                        {activeTab === 'groups' && (
-                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-orange-600/40">
-                                <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase">Group Forge</h3>
-                                <div className="flex flex-col gap-3">
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Group Title</label>
-                                        <input type="text" placeholder="Enter title..." value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
-                                    </div>
-                                    <div>
-                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Member Usernames (one per line)</label>
-                                        <textarea rows="4" placeholder="username1\nusername2" value={groupMembers} onChange={e=>setGroupMembers(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400 font-mono"></textarea>
-                                    </div>
-                                    <button onClick={(e)=>{
-                                        e.preventDefault();
-                                        const node = nodes.find(n => n.id === selectedNodeId);
-                                        if(!node) return alert('Select an Account first');
-                                        if(!groupTitle || !groupMembers) return alert('Enter Title and Usernames');
-                                        setIsCreatingGroup(true);
-                                        fetch('/api/group/create', {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json'},
-                                            body: JSON.stringify({ session_id: node.sessionid, title: groupTitle, usernames: groupMembers.split('\n') })
-                                        }).then(res => res.json()).then(data => {
-                                            setIsCreatingGroup(false);
-                                            if(data.status === 'success') { alert(`Devil Group Forged! Thread ID: ${data.thread_id}`); setGroupTitle(''); setGroupMembers(''); }
-                                            else alert(data.message);
-                                        }).catch(()=>{ setIsCreatingGroup(false); alert('Error creating group'); });
-                                    }} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">{isCreatingGroup ? 'Forging Group...' : 'Forge Group Thread'}</button>
-                                </div>
-                            </div>
-                        )}
-                    </main>
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="csm-card p-8 rounded-2xl w-full max-w-md flex flex-col gap-5 chainsaw-glow-red border-red-600/50 relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-orange-600/20 rounded-full blur-2xl"></div>
+            <div class="text-center">
+                <h1 class="chainsaw-font text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 uppercase">AARYAVxYASH</h1>
+                <p class="sub-font text-xs text-red-400 mt-1 uppercase tracking-widest font-bold">🪚 Chainsaw Devil Hunter Command 🪚</p>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] sub-font font-bold text-gray-400 uppercase tracking-widest">Hunter Identity</label>
+                    <input type="text" id="loginUser" placeholder="Operator Tag" class="w-full mt-1 bg-black/80 border border-red-900/60 rounded-xl p-3 text-xs outline-none text-orange-400 focus:border-red-500 transition"/>
                 </div>
-            );
+                <div>
+                    <label class="text-[10px] sub-font font-bold text-gray-400 uppercase tracking-widest">Contract Key</label>
+                    <input type="password" id="loginPass" placeholder="Devil Passcode" class="w-full mt-1 bg-black/80 border border-red-900/60 rounded-xl p-3 text-xs outline-none text-orange-400 focus:border-red-500 transition"/>
+                </div>
+            </div>
+            <button onclick="handleLogin()" class="py-3.5 bg-gradient-to-r from-red-700 via-red-600 to-orange-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest chainsaw-glow-red text-white sub-font">
+                Pull Starter Cord (Enter)
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN APP DASHBOARD (Hidden until login) -->
+    <div id="appScreen" class="min-h-screen flex flex-col md:flex-row hidden">
+        <!-- Sidebar -->
+        <aside class="w-full md:w-64 csm-card border-r border-red-900/50 flex flex-col justify-between p-4 z-20">
+            <div>
+                <div class="py-4 px-2 mb-4 border-b border-red-900/40">
+                    <h1 class="chainsaw-font text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 tracking-widest uppercase">AARYAVxYASH</h1>
+                    <p class="text-[10px] text-orange-400 font-bold mt-1 flex items-center gap-1.5 sub-font">
+                        <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span> CSM ENGINE ACTIVE
+                    </p>
+                </div>
+                <nav class="flex flex-col gap-2">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red">🩸 Dashboard</button>
+                    <button onclick="switchTab('accounts')" id="nav-accounts" class="nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font text-gray-400 hover:bg-red-950/40">👤 Devil Vault</button>
+                    <button onclick="switchTab('spam')" id="nav-spam" class="nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font text-gray-400 hover:bg-red-950/40">🔥 DM Chainsaw Spam</button>
+                    <button onclick="switchTab('playwright')" id="nav-playwright" class="nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font text-gray-400 hover:bg-red-950/40">🚀 Playwright Blitz</button>
+                    <button onclick="switchTab('nclock')" id="nav-nclock" class="nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font text-gray-400 hover:bg-red-950/40">🪚 NC Lock (Devil Title)</button>
+                    <button onclick="switchTab('groups')" id="nav-groups" class="nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font text-gray-400 hover:bg-red-950/40">👥 Group Forge</button>
+                </nav>
+            </div>
+            <div class="pt-4 border-t border-red-900/40 flex flex-col gap-3">
+                <div class="bg-black/80 p-3 rounded-xl border border-red-600/30 text-[11px]">
+                    <span class="text-gray-500 block text-[10px] uppercase font-bold">Bound Devil Account:</span>
+                    <span id="activeAccountDisplay" class="text-orange-400 font-bold truncate block">No Contract Active</span>
+                </div>
+                <button onclick="handleLogout()" class="bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/50 py-2.5 rounded-xl text-xs font-bold uppercase transition sub-font">Sever Contract (Logout)</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full z-10">
+            <header class="flex justify-between items-center csm-card p-4 rounded-2xl border-orange-600/30">
+                <div>
+                    <h2 id="currentModuleTitle" class="chainsaw-font text-base font-black uppercase tracking-widest text-orange-500">DASHBOARD DEVIL MODULE</h2>
+                    <p class="text-xs text-gray-400 sub-font">Execute high-speed thread operations with Denji's power.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-400 sub-font">Active Account:</span>
+                    <select id="accountDropdown" onchange="changeActiveNode()" class="bg-black border border-red-600/40 rounded-xl px-3 py-2 text-xs text-orange-400 font-bold outline-none">
+                        <option>No Accounts Linked</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- TAB 1: DASHBOARD -->
+            <div id="tab-dashboard" class="tab-content flex flex-col gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="csm-card p-5 rounded-2xl border-red-600/40">
+                        <span class="text-gray-400 text-xs uppercase font-bold sub-font">Linked Devil Accounts</span>
+                        <h3 id="statAccounts" class="text-3xl font-black text-white mt-1 chainsaw-font">0</h3>
+                    </div>
+                    <div class="csm-card p-5 rounded-2xl border-orange-600/40">
+                        <span class="text-gray-400 text-xs uppercase font-bold sub-font">Active Chainsaw Tasks</span>
+                        <h3 id="statTasks" class="text-3xl font-black text-orange-500 mt-1 chainsaw-font">0</h3>
+                    </div>
+                    <div class="csm-card p-5 rounded-2xl border-red-600/40">
+                        <span class="text-gray-400 text-xs uppercase font-bold sub-font">Devil Power Uptime</span>
+                        <h3 class="text-3xl font-black text-red-500 mt-1 chainsaw-font">100% BLOOD</h3>
+                    </div>
+                </div>
+
+                <div class="csm-card p-6 rounded-2xl flex flex-col gap-3 border-red-600/30">
+                    <h3 class="text-xs font-bold text-red-400 uppercase tracking-widest sub-font">Active Background Devil Processes</h3>
+                    <div id="activeTasksList" class="flex flex-col gap-2">
+                        <p class="text-xs text-gray-500 italic">No chainsaw workers currently ripping through threads.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: ACCOUNTS VAULT -->
+            <div id="tab-accounts" class="tab-content flex flex-col gap-6 max-w-2xl hidden">
+                <div class="csm-card p-6 rounded-2xl border-red-600/40 flex flex-col gap-4">
+                    <h3 class="chainsaw-font text-base font-bold text-orange-500 uppercase mb-1">Devil Contract Vault</h3>
+                    <p class="text-xs text-gray-400 sub-font">Bind session IDs to switch seamlessly between target accounts.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="inputSessionId" placeholder="Paste sessionid cookie..." class="bg-black border border-red-900/60 rounded-xl p-3 text-xs flex-1 outline-none text-orange-400 focus:border-red-500 transition"/>
+                        <button onclick="addAccount()" id="verifyBtn" class="bg-gradient-to-r from-red-600 to-orange-600 text-white px-5 py-3 rounded-xl text-xs font-bold hover:opacity-95 transition sub-font">+ Bind Session ID</button>
+                    </div>
+                    <div class="border-t border-red-900/40 pt-4 mt-2">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase mb-3 sub-font">Bound Contract List</h3>
+                        <div id="accountsListContainer" class="flex flex-col gap-2">
+                            <p class="text-xs text-gray-500 italic">No active contracts bound yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: SPAM -->
+            <div id="tab-spam" class="tab-content flex flex-col gap-4 max-w-2xl hidden">
+                <div class="csm-card p-6 rounded-2xl border-orange-600/40 flex flex-col gap-4">
+                    <h3 class="chainsaw-font text-base font-bold text-orange-500 uppercase">Chainsaw DM Blitz Campaign</h3>
+                    <div class="flex flex-col gap-3">
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Thread ID</label>
+                            <input type="text" id="spamThread" placeholder="e.g. 2605643833284076" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Name (For {target} replacement)</label>
+                            <input type="text" id="spamTargetName" placeholder="e.g. target_name" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Delay Interval (Seconds)</label>
+                            <input type="text" id="spamJitter" value="3.5" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Message Payload Lines</label>
+                            <textarea id="spamPayload" rows="5" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-300 font-mono">{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮
+
+{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷
+
+{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻</textarea>
+                        </div>
+                        <button onclick="startSpam()" class="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">
+                            🪚 Unleash Chainsaw Blitz
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: PLAYWRIGHT BLITZ -->
+            <div id="tab-playwright" class="tab-content flex flex-col gap-4 max-w-2xl hidden">
+                <div class="csm-card p-6 rounded-2xl border-orange-600/40 flex flex-col gap-4">
+                    <h3 class="chainsaw-font text-base font-bold text-orange-500 uppercase">🚀 Playwright High-Speed Spammer</h3>
+                    <p class="text-xs text-gray-400 sub-font">Runs browser automation worker from your Python script to blast messages with zero rate-limit blocks.</p>
+                    <div class="flex flex-col gap-3">
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Thread URL or ID</label>
+                            <input type="text" id="pwUrl" placeholder="https://www.instagram.com/direct/t/..." class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Name ({t} replacement)</label>
+                            <input type="text" id="pwTarget" value="target" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Operator Tag / Username</label>
+                            <input type="text" id="pwUsername" value="playwright_user" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Profile Directory Folder</label>
+                            <input type="text" id="pwProfileDir" value="acc_1" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <button onclick="startPlaywrightBlitz()" class="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">
+                            🚀 Launch Playwright Worker
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: NC LOCK -->
+            <div id="tab-nclock" class="tab-content flex flex-col gap-4 max-w-2xl hidden">
+                <div class="csm-card p-6 rounded-2xl border-red-600/40 flex flex-col gap-4">
+                    <h3 class="chainsaw-font text-base font-bold text-red-500 uppercase">NC Lock (Group Title Rotation)</h3>
+                    <p class="text-xs text-red-400/80 sub-font">⚠️ Do NOT use `<` in title base to prevent API parameters rejection.</p>
+                    <div class="flex flex-col gap-3">
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Thread ID</label>
+                            <input type="text" id="ncThread" placeholder="e.g. 2605643833284076" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Title Base (Clean text without `<`)</label>
+                            <input type="text" id="ncText" placeholder="e.g. REHAND ON TOP" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Rotation Jitter (Seconds)</label>
+                            <input type="text" id="ncJitter" value="4.0" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <button onclick="startNcLock()" class="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-red sub-font text-white">
+                            🩸 Activate NC Lock Worker
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: GROUPS -->
+            <div id="tab-groups" class="tab-content flex flex-col gap-4 max-w-2xl hidden">
+                <div class="csm-card p-6 rounded-2xl border-orange-600/40 flex flex-col gap-4">
+                    <h3 class="chainsaw-font text-base font-bold text-orange-500 uppercase">Group Forge</h3>
+                    <div class="flex flex-col gap-3">
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Group Title</label>
+                            <input type="text" id="groupTitle" placeholder="Enter title..." class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Member Usernames (one per line)</label>
+                            <textarea id="groupMembers" rows="4" placeholder="username1\nusername2" class="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400 font-mono"></textarea>
+                        </div>
+                        <button onclick="createGroup()" id="groupBtn" class="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">Forge Group Thread</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let nodes = JSON.parse(localStorage.getItem('panel_nodes') || '[]');
+        let selectedNodeId = nodes.length > 0 ? nodes[0].id : '';
+        let isLoggedIn = localStorage.getItem('panel_logged') === 'true';
+
+        window.onload = function() {
+            if (isLoggedIn) {
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('appScreen').classList.remove('hidden');
+                updateNodesUI();
+                setInterval(fetchActiveTasks, 2000);
+            }
+        };
+
+        function handleLogin() {
+            const u = document.getElementById('loginUser').value;
+            const p = document.getElementById('loginPass').value;
+            if(!u || !p) return alert('Enter credentials');
+            isLoggedIn = true;
+            localStorage.setItem('panel_logged', 'true');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            updateNodesUI();
         }
 
-        // CSM Crimson Blood & Ember Canvas Effect
+        function handleLogout() {
+            isLoggedIn = false;
+            localStorage.removeItem('panel_logged');
+            document.getElementById('appScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.className = "nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font text-gray-400 hover:bg-red-950/40";
+            });
+            document.getElementById('nav-' + tabId).className = "nav-btn text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red";
+            document.getElementById('currentModuleTitle').innerText = tabId.toUpperCase() + ' DEVIL MODULE';
+        }
+
+        function updateNodesUI() {
+            localStorage.setItem('panel_nodes', JSON.stringify(nodes));
+            const dropdown = document.getElementById('accountDropdown');
+            dropdown.innerHTML = '';
+            
+            if (nodes.length === 0) {
+                dropdown.innerHTML = '<option>No Accounts Linked</option>';
+                document.getElementById('activeAccountDisplay').innerText = 'No Contract Active';
+            } else {
+                nodes.forEach(n => {
+                    const opt = document.createElement('option');
+                    opt.value = n.id;
+                    opt.innerText = '@' + n.username;
+                    if(n.id === selectedNodeId) opt.selected = true;
+                    dropdown.appendChild(opt);
+                });
+                const activeNode = nodes.find(n => n.id === selectedNodeId);
+                if(activeNode) document.getElementById('activeAccountDisplay').innerText = '@' + activeNode.username;
+            }
+
+            document.getElementById('statAccounts').innerText = nodes.length;
+
+            const listContainer = document.getElementById('accountsListContainer');
+            listContainer.innerHTML = '';
+            if (nodes.length === 0) {
+                listContainer.innerHTML = '<p class="text-xs text-gray-500 italic">No active contracts bound yet.</p>';
+            } else {
+                nodes.forEach(n => {
+                    listContainer.innerHTML += `
+                        <div class="flex justify-between items-center bg-black/80 p-3.5 border border-red-900/60 rounded-xl">
+                            <div class="text-xs">
+                                <span class="text-orange-400 font-bold">@${n.username}</span>
+                                <span class="text-gray-500 ml-3 font-mono text-[10px]">ID: ${n.id}</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="selectNode('${n.id}')" class="text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase transition sub-font ${selectedNodeId===n.id ? 'bg-orange-600 text-black' : 'bg-red-950/80 text-gray-300 hover:bg-red-900'}">${selectedNodeId===n.id ? 'Active' : 'Switch'}</button>
+                                <button onclick="removeAccount('${n.id}')" class="bg-black hover:bg-red-950 text-red-500 text-[10px] font-bold px-3 py-1.5 rounded-lg transition border border-red-900/60">Sever</button>
+                            </div>
+                        </div>`;
+                });
+            }
+        }
+
+        function changeActiveNode() {
+            selectedNodeId = document.getElementById('accountDropdown').value;
+            updateNodesUI();
+        }
+
+        function selectNode(id) {
+            selectedNodeId = id;
+            updateNodesUI();
+        }
+
+        function addAccount() {
+            const sessionid = document.getElementById('inputSessionId').value.trim();
+            if(!sessionid) return alert('Enter Session ID');
+            const btn = document.getElementById('verifyBtn');
+            btn.innerText = 'Binding...';
+            
+            fetch('/api/account/verify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ sessionid })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.innerText = '+ Bind Session ID';
+                if(data.status === 'success') {
+                    const newItem = { id: Date.now().toString(), username: data.username, sessionid: data.sessionid };
+                    nodes.push(newItem);
+                    selectedNodeId = newItem.id;
+                    document.getElementById('inputSessionId').value = '';
+                    updateNodesUI();
+                    alert(`Devil Contract Bound: @${data.username}`);
+                } else {
+                    alert(data.message);
+                }
+            }).catch(() => {
+                btn.innerText = '+ Bind Session ID';
+                alert('Network Error');
+            });
+        }
+
+        function removeAccount(id) {
+            nodes = nodes.filter(n => n.id !== id);
+            if(selectedNodeId === id && nodes.length > 0) selectedNodeId = nodes[0].id;
+            else if(nodes.length === 0) selectedNodeId = '';
+            updateNodesUI();
+        }
+
+        function startSpam() {
+            const node = nodes.find(n => n.id === selectedNodeId);
+            if(!node) return alert('Select a Devil Hunter Account first');
+            const thread = document.getElementById('spamThread').value;
+            const payload = document.getElementById('spamPayload').value;
+            if(!thread || !payload) return alert('Fill Thread ID & Payload');
+
+            fetch('/api/task/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    type: 'spam', session_id: node.sessionid, username: node.username,
+                    thread_id: thread, target: document.getElementById('spamTargetName').value,
+                    jitter: document.getElementById('spamJitter').value, payload: payload.split('\n')
+                })
+            }).then(() => alert('Chainsaw DM Blitz Triggered! 🔥'));
+        }
+
+        function startPlaywrightBlitz() {
+            const url = document.getElementById('pwUrl').value;
+            if(!url) return alert('Enter URL or Thread ID');
+            fetch('/api/task/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    type: 'playwright_spam',
+                    url: url.startsWith("http") ? url : `https://www.instagram.com/direct/t/${url}`,
+                    target: document.getElementById('pwTarget').value,
+                    username: document.getElementById('pwUsername').value,
+                    profile_dir: document.getElementById('pwProfileDir').value
+                })
+            }).then(() => alert('🚀 Playwright High-Speed Blitz Started!'));
+        }
+
+        function startNcLock() {
+            const node = nodes.find(n => n.id === selectedNodeId);
+            if(!node) return alert('Select a Devil Hunter Account first');
+            const thread = document.getElementById('ncThread').value;
+            const text = document.getElementById('ncText').value;
+            if(!thread || !text) return alert('Fill Thread ID & Title Base');
+
+            fetch('/api/task/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    type: 'nclock', session_id: node.sessionid, username: node.username,
+                    thread_id: thread, jitter: document.getElementById('ncJitter').value, nc_text: text
+                })
+            }).then(() => alert('Devil NC Lock Protocol Engaged! 🪚'));
+        }
+
+        function createGroup() {
+            const node = nodes.find(n => n.id === selectedNodeId);
+            if(!node) return alert('Select an Account first');
+            const title = document.getElementById('groupTitle').value;
+            const members = document.getElementById('groupMembers').value;
+            if(!title || !members) return alert('Enter Title and Usernames');
+
+            const btn = document.getElementById('groupBtn');
+            btn.innerText = 'Forging Group...';
+            fetch('/api/group/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ session_id: node.sessionid, title, usernames: members.split('\n') })
+            }).then(res => res.json()).then(data => {
+                btn.innerText = 'Forge Group Thread';
+                if(data.status === 'success') {
+                    alert(`Devil Group Forged! Thread ID: ${data.thread_id}`);
+                    document.getElementById('groupTitle').value = '';
+                    document.getElementById('groupMembers').value = '';
+                } else {
+                    alert(data.message);
+                }
+            }).catch(() => {
+                btn.innerText = 'Forge Group Thread';
+                alert('Error creating group');
+            });
+        }
+
+        function fetchActiveTasks() {
+            fetch('/api/tasks/active')
+            .then(res => res.json())
+            .then(data => {
+                const tasks = data.tasks || [];
+                document.getElementById('statTasks').innerText = tasks.length;
+                const container = document.getElementById('activeTasksList');
+                if(tasks.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-gray-500 italic">No chainsaw workers currently ripping through threads.</p>';
+                } else {
+                    container.innerHTML = '';
+                    tasks.forEach(t => {
+                        container.innerHTML += `
+                            <div class="flex justify-between items-center bg-black/80 p-3.5 border border-red-900/60 rounded-xl">
+                                <div class="text-xs flex items-center gap-3">
+                                    <span class="bg-red-950 text-red-400 border border-red-700/50 font-bold px-2.5 py-0.5 rounded-lg text-[10px] sub-font">${t.type.toUpperCase()}</span>
+                                    <span class="text-orange-300 font-bold">@${t.username}</span>
+                                    <span class="text-gray-500 font-mono">Thread: ${t.thread_id || t.url || 'N/A'}</span>
+                                </div>
+                                <button onclick="stopTask('${t.task_id}')" class="bg-red-900/80 hover:bg-red-700 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-lg uppercase transition sub-font">Terminate Task</button>
+                            </div>`;
+                    });
+                }
+            }).catch(() => {});
+        }
+
+        function stopTask(tid) {
+            fetch('/api/task/stop', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ task_id: tid })
+            });
+        }
+
+        // Canvas Blood Ember Animation
         const canvas = document.getElementById('bgCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
@@ -498,13 +516,11 @@
 
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
             particles.forEach((p) => {
                 p.x += p.vx;
                 p.y += p.vy;
                 if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
                 if(p.y < 0) p.y = canvas.height;
-
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
@@ -513,8 +529,6 @@
             requestAnimationFrame(animate);
         }
         animate();
-
-        ReactDOM.render(<App />, document.getElementById('root'));
     </script>
 </body>
 </html>
