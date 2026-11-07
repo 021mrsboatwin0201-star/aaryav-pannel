@@ -1,10 +1,15 @@
 import os
 import time
+import json
+import random
+import asyncio
 import threading
 import urllib.request
+from datetime import datetime, timezone, timedelta
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from instagrapi import Client
+from playwright.async_api import async_playwright
 
 app = Flask(__name__)
 CORS(app)
@@ -13,12 +18,21 @@ ACTIVE_TASKS = {}
 LOGS = []
 INSTA_CLIENTS = {}
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def ist_now():
+    n = datetime.now(IST)
+    return f"{n.hour:02d}:{n.minute:02d}:{n.second:02d}:{n.microsecond // 1000:03d}"
+
 def add_log(msg):
     timestamp = time.strftime("%H:%M:%S")
     LOGS.insert(0, f"[{timestamp}] {msg}")
     if len(LOGS) > 100:
         LOGS.pop()
 
+# ==========================================
+# EXISTING INSTAGRAPI WORKER (UNTOUCHED)
+# ==========================================
 def background_worker(thread_task_id, task_data):
     add_log(f"[WORKER] Task {thread_task_id} launched.")
     task_type = task_data.get('type')
@@ -42,12 +56,10 @@ def background_worker(thread_task_id, task_data):
         try:
             if task_type == 'spam' and payload:
                 raw_msg = payload[idx % len(payload)]
-                
                 if isinstance(raw_msg, str) and raw_msg.strip():
                     formatted_msg = raw_msg.replace("{target}", target_name)
                     client.direct_send(formatted_msg, thread_ids=[thread_id])
                     add_log(f"[SENT] @{username} -> Thread {thread_id}: {formatted_msg[:30]}...")
-                
                 idx += 1
             elif task_type == 'nclock':
                 emojis = ['💕', '🔥', '✨', '👑', '⚡', '😈']
@@ -56,12 +68,10 @@ def background_worker(thread_task_id, task_data):
                 new_title = f"{nc_text} {current_emoji}"
                 
                 try:
-                    # Working script wala exact clean method[cite: 1]
                     client.direct_thread_update_title(thread_id, new_title)
                     add_log(f"[NC LOCK] @{username} -> Title: {new_title}")
                 except Exception as inner_e:
                     add_log(f"[NC LOCK ERROR] @{username}: {str(inner_e)}")
-                
                 idx += 1
             
             time.sleep(jitter)
@@ -71,17 +81,110 @@ def background_worker(thread_task_id, task_data):
 
     add_log(f"[WORKER] Task {thread_task_id} terminated.")
 
-def self_ping_worker():
-    app_url = os.environ.get('RENDER_EXTERNAL_URL')
-    if not app_url:
-        return
-    while True:
-        try:
-            time.sleep(300)
-            urllib.request.urlopen(app_url)
-        except Exception:
-            pass
+# ==========================================
+# NEW PLAYWRIGHT WORKER (yashpy.py INTEGRATION)
+# ==========================================
+PRIMARY_SELECTOR = 'div[role="textbox"]'
+MOBILE_UA = "Mozilla/5.0 (Linux; Android 13; vivo V60) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36"
+MOBILE_VIEWPORT = {"width": 412, "height": 915}
+_SEL = json.dumps(PRIMARY_SELECTOR)
 
+JS_FILL = f"""
+(text) => {{
+    const el = document.querySelector({_SEL});
+    if (!el) return null;
+    const wasEmpty = el.innerText.trim() === '';
+    el.focus();
+    document.execCommand('selectAll', false, null);
+    const dt = new DataTransfer();
+    dt.setData('text/plain', text);
+    el.dispatchEvent(new ClipboardEvent('paste', {{
+        clipboardData: dt,
+        bubbles: true,
+        cancelable: true
+    }}));
+    return wasEmpty;
+}}
+"""
+
+async def run_playwright_spammer(task_id, task_data):
+    url = task_data.get('url')
+    target = task_data.get('target', 'target')
+    messages = task_data.get('messages', [
+        "[{t}] [{time}] TIME DEKH OR MAA CHUDWA APNI 💙"
+    ])
+    profile_dir = task_data.get('profile_dir')
+    username = task_data.get('username', 'playwright_user')
+
+    add_log(f"[PLAYWRIGHT] Launching browser for @{username}...")
+
+    line_templates = [
+        [line.replace("{t}", target) for line in m.split("\n")]
+        for m in messages
+    ]
+    pool_size = len(line_templates)
+
+    def get_next_msg():
+        t = ist_now()
+        tmpl = line_templates[random.randrange(pool_size)]
+        return "\n".join(line.replace("{time}", t) for line in tmpl)
+
+    async with async_playwright() as p:
+        try:
+            browser = await p.chromium.launch_persistent_context(
+                user_data_dir=profile_dir,
+                headless=True,
+                args=[
+                    "--disable-dev-shm-usage", "--no-sandbox", "--disable-gpu",
+                    "--disable-setuid-sandbox", "--disable-extensions",
+                    "--disable-blink-features=AutomationControlled"
+                ],
+                user_agent=MOBILE_UA,
+                viewport=MOBILE_VIEWPORT,
+                is_mobile=True,
+                has_touch=True,
+                ignore_https_errors=True
+            )
+
+            await browser.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+            """)
+
+            page = browser.pages[0] if browser.pages else await browser.new_page()
+            await page.goto(url, timeout=60000, wait_until='domcontentloaded')
+
+            add_log(f"[PLAYWRIGHT] Connected to thread for @{username}")
+
+            while ACTIVE_TASKS.get(task_id, {}).get('running', False):
+                try:
+                    el = await page.query_selector(PRIMARY_SELECTOR)
+                    if el:
+                        msg_text = get_next_msg()
+                        await page.evaluate(JS_FILL, msg_text)
+                        await page.keyboard.press("Enter")
+                        add_log(f"[PLAYWRIGHT SENT] @{username} -> Message dispatched")
+                    else:
+                        add_log(f"[PLAYWRIGHT WARN] Input box not visible for @{username}")
+                        await asyncio.sleep(3)
+                    await asyncio.sleep(1)
+                except Exception as inner_ex:
+                    add_log(f"[PLAYWRIGHT ERROR] {str(inner_ex)}")
+                    await asyncio.sleep(2)
+
+            await browser.close()
+            add_log(f"[PLAYWRIGHT] Session ended for @{username}")
+
+        except Exception as e:
+            add_log(f"[PLAYWRIGHT CRASH] @{username}: {str(e)}")
+
+def start_playwright_thread(task_id, task_data):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(run_playwright_spammer(task_id, task_data))
+
+# ==========================================
+# FLASK ROUTES (INSTAGRAPI + PLAYWRIGHT)
+# ==========================================
 @app.route('/')
 def home():
     try:
@@ -135,17 +238,22 @@ def create_group():
 @app.route('/api/task/start', methods=['POST'])
 def start_task():
     data = request.json
-    task_id = f"{data.get('type')}_{data.get('username')}_{int(time.time())}"
+    task_type = data.get('type')
+    task_id = f"{task_type}_{data.get('username', 'user')}_{int(time.time())}"
     
     ACTIVE_TASKS[task_id] = {
         'running': True,
-        'type': data.get('type'),
+        'type': task_type,
         'username': data.get('username'),
-        'thread_id': data.get('thread_id'),
+        'thread_id': data.get('thread_id', 'N/A'),
         'started_at': time.strftime("%H:%M:%S")
     }
 
-    thread = threading.Thread(target=background_worker, args=(task_id, data), daemon=True)
+    if task_type == 'playwright_spam':
+        thread = threading.Thread(target=start_playwright_thread, args=(task_id, data), daemon=True)
+    else:
+        thread = threading.Thread(target=background_worker, args=(task_id, data), daemon=True)
+        
     thread.start()
     return jsonify({'status': 'success', 'task_id': task_id})
 
@@ -174,5 +282,4 @@ def get_active_tasks():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    threading.Thread(target=self_ping_worker, daemon=True).start()
     app.run(host='0.0.0.0', port=port)
