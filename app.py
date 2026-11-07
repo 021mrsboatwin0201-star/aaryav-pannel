@@ -54,7 +54,7 @@ def start_task():
     task_type = data.get('type')
     task_id_base = str(int(time.time() * 1000))
     
-    # 1. Single Account Spam
+    # 1. Single Account Spam Campaign
     if task_type == 'spam':
         session_id = data.get('session_id')
         username = data.get('username')
@@ -92,9 +92,9 @@ def start_task():
         task_threads[task_id] = t
         t.start()
 
-    # 2. SWARM ATTACK (All accounts simultaneous spam)
+    # 2. SWARM ATTACK (All linked accounts simultaneous spam raid)
     elif task_type == 'swarm_spam':
-        accounts = data.get('accounts', []) # List of {username, sessionid}
+        accounts = data.get('accounts', [])
         thread_id = data.get('thread_id')
         target = data.get('target', '')
         jitter = float(data.get('jitter', 3.5))
@@ -133,6 +133,7 @@ def start_task():
             task_threads[task_id] = t
             t.start()
 
+    # 3. NC LOCK (Group Title Rotation with Fixed Method)
     elif task_type == 'nclock':
         session_id = data.get('session_id')
         username = data.get('username')
@@ -150,7 +151,13 @@ def start_task():
                 counter = 1
                 while task_id in active_tasks:
                     title = f"{nc_text} [{counter}]"
-                    cl.direct_update_group_title(int(thread_id), title)
+                    
+                    try:
+                        cl.direct_thread_update_title(int(thread_id), title)
+                    except AttributeError:
+                        thread = cl.direct_thread(int(thread_id))
+                        thread.update_title(title)
+
                     add_log(f"[@{username}] Updated NC Title to: {title}")
                     counter += 1
                     time.sleep(jitter)
