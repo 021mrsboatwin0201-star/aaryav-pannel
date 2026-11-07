@@ -75,7 +75,7 @@ def start_task():
                     for msg in payload:
                         if task_id not in active_tasks:
                             break
-                        formatted_msg = msg.replace('{target}', f"@{target}" if target else "")
+                        formatted_msg = msg.replace('{target}', f"{target}" if target else "")
                         cl.direct_send(formatted_msg, thread_ids=[int(thread_id)])
                         add_log(f"[@{username}] Sent payload block to thread {thread_id}")
                         time.sleep(jitter)
