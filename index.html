@@ -3,13 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AARYAVxYASH PANNEL - Command Center</title>
+    <title>AIMDOG // Chainsaw Devil Hunter Command</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Space+Grotesk:wght@500;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #070303; color: #f3f4f6; overflow-x: hidden; }
+        .chainsaw-font { font-family: 'Cinzel', serif; }
+        .sub-font { font-family: 'Space Grotesk', sans-serif; }
+        
+        /* Chainsaw Man Blood & Cord Accent Styles */
+        .csm-card {
+            background: rgba(18, 6, 6, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.15);
+        }
+        .csm-card-orange {
+            background: rgba(20, 10, 5, 0.9);
+            border: 1px solid rgba(249, 115, 22, 0.4);
+            box-shadow: 0 0 25px rgba(249, 115, 22, 0.15);
+        }
+        .chainsaw-glow-red { box-shadow: 0 0 20px rgba(220, 38, 38, 0.6); }
+        .chainsaw-glow-orange { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); }
+        .saw-border { border-style: dashed; border-color: #ef4444; }
+        
+        canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #070303; }
+        ::-webkit-scrollbar-thumb { background: #dc2626; border-radius: 3px; }
+    </style>
 </head>
-<body class="bg-[#070707] text-white font-sans antialiased overflow-x-hidden">
+<body class="bg-[#070303] text-white font-sans antialiased">
+    <!-- Live Blood & Spark Canvas Grid -->
+    <canvas id="bgCanvas"></canvas>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -73,30 +102,11 @@
                 return () => clearInterval(interval);
             }, [isLoggedIn]);
 
-            // Set initial alpha profile payload on load
             React.useEffect(() => {
                 if(payloadProfile === 'alpha') {
                     setSpamPayload(
                         "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
                         "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
                         "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻"
                     );
                 }
@@ -125,18 +135,24 @@
                         setNodes(prev => [...prev, newItem]);
                         setSelectedNodeId(newItem.id);
                         setInputSessionId('');
-                        alert(`Connected @${data.username}`);
+                        alert(`Devil Contract Bound: @${data.username}`);
                     } else alert(data.message);
-                }).catch(()=>{ setIsVerifying(false); alert('Network Error'); });
+                }).catch(()=>{ setIsVerifying(false); alert('Contract Failed: Network Error'); });
             };
 
             const removeAccount = (id) => {
-                setNodes(prev => prev.filter(n => n.id !== id));
+                const updated = nodes.filter(n => n.id !== id);
+                setNodes(updated);
+                if(selectedNodeId === id && updated.length > 0) {
+                    setSelectedNodeId(updated[0].id);
+                } else if(updated.length === 0) {
+                    setSelectedNodeId('');
+                }
             };
 
             const startSpam = () => {
                 const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select an Account first');
+                if(!node) return alert('Select a Devil Hunter Account first');
                 if(!spamThread || !spamPayload) return alert('Fill Thread ID & Payload');
                 fetch('/api/task/start', {
                     method: 'POST',
@@ -145,12 +161,12 @@
                         type: 'spam', session_id: node.sessionid, username: node.username,
                         thread_id: spamThread, target: spamTargetName, jitter: spamJitter, payload: spamPayload.split('\n')
                     })
-                }).then(()=>alert('Campaign Launched with Target Replacement!'));
+                }).then(()=>alert('Chainsaw DM Blitz Triggered! 🔥'));
             };
 
             const startNcLock = () => {
                 const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select an Account first');
+                if(!node) return alert('Select a Devil Hunter Account first');
                 if(!ncThread || !ncText) return alert('Fill Thread ID & Title Base');
                 fetch('/api/task/start', {
                     method: 'POST',
@@ -159,34 +175,7 @@
                         type: 'nclock', session_id: node.sessionid, username: node.username,
                         thread_id: ncThread, jitter: ncJitter, nc_text: ncText
                     })
-                }).then(()=>alert('NC Lock Worker Enabled!'));
-            };
-
-            const handleCreateGroup = (e) => {
-                e.preventDefault();
-                const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return alert('Select an Account first');
-                if(!groupTitle || !groupMembers) return alert('Enter Title and Usernames');
-
-                setIsCreatingGroup(true);
-                fetch('/api/group/create', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        session_id: node.sessionid,
-                        title: groupTitle,
-                        usernames: groupMembers.split('\n')
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    setIsCreatingGroup(false);
-                    if(data.status === 'success') {
-                        alert(`Group Created! Thread ID: ${data.thread_id}`);
-                        setGroupTitle('');
-                        setGroupMembers('');
-                    } else alert(data.message);
-                }).catch(()=>{ setIsCreatingGroup(false); alert('Error creating group'); });
+                }).then(()=>alert('Devil NC Lock Protocol Engaged! 🪚'));
             };
 
             const stopTask = (tid) => {
@@ -198,13 +187,33 @@
 
             if(!isLoggedIn) {
                 return (
-                    <div className="min-h-screen flex items-center justify-center bg-black">
-                        <form onSubmit={handleLogin} className="bg-[#111] border border-neutral-800 p-8 rounded-2xl w-full max-w-sm flex flex-col gap-4 shadow-2xl">
-                            <h1 className="text-xl font-black text-red-600 uppercase text-center tracking-wider">AARYAV PANNEL</h1>
-                            <p className="text-xs text-neutral-500 text-center mb-2">Secure Automation Suite</p>
-                            <input type="text" placeholder="Username" value={loginUser} onChange={e=>setLoginUser(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs outline-none text-white focus:border-red-600"/>
-                            <input type="password" placeholder="Password" value={loginPass} onChange={e=>setLoginPass(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs outline-none text-white focus:border-red-600"/>
-                            <button type="submit" className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">Access Panel</button>
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <form onSubmit={handleLogin} className="csm-card p-8 rounded-2xl w-full max-w-md flex flex-col gap-5 chainsaw-glow-red border-red-600/50 relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-600/20 rounded-full blur-2xl"></div>
+                            <div className="text-center">
+                                <div className="inline-flex p-3 rounded-full bg-gradient-to-br from-red-600 to-orange-600 mb-3 chainsaw-glow-orange">
+                                    <svg className="w-8 h-8 text-black animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M19.78 4.22a.75.75 0 00-1.06 0L14 8.94l-1.72-1.72a.75.75 0 00-1.06 1.06l1.72 1.72-6.19 6.19a.75.75 0 000 1.06l3.5 3.5a.75.75 0 001.06 0l6.19-6.19 1.72 1.72a.75.75 0 001.06-1.06L18.54 13.5l4.72-4.72a.75.75 0 000-1.06l-3.48-3.5z"/>
+                                    </svg>
+                                </div>
+                                <h1 className="chainsaw-font text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 uppercase">AARYAVxYASH</h1>
+                                <p className="sub-font text-xs text-red-400 mt-1 uppercase tracking-widest font-bold">🪚 Chainsaw Devil Hunter Command 🪚</p>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] sub-font font-bold text-gray-400 uppercase tracking-widest">Hunter Identity</label>
+                                    <input type="text" placeholder="Operator Tag" value={loginUser} onChange={e=>setLoginUser(e.target.value)} className="w-full mt-1 bg-black/80 border border-red-900/60 rounded-xl p-3 text-xs outline-none text-orange-400 focus:border-red-500 transition"/>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] sub-font font-bold text-gray-400 uppercase tracking-widest">Contract Key</label>
+                                    <input type="password" placeholder="Devil Passcode" value={loginPass} onChange={e=>setLoginPass(e.target.value)} className="w-full mt-1 bg-black/80 border border-red-900/60 rounded-xl p-3 text-xs outline-none text-orange-400 focus:border-red-500 transition"/>
+                                </div>
+                            </div>
+
+                            <button type="submit" className="py-3.5 bg-gradient-to-r from-red-700 via-red-600 to-orange-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest chainsaw-glow-red text-white sub-font">
+                                Pull Starter Cord (Enter)
+                            </button>
                         </form>
                     </div>
                 );
@@ -213,43 +222,44 @@
             const activeNode = nodes.find(n => n.id === selectedNodeId);
 
             return (
-                <div className="min-h-screen flex flex-col md:flex-row bg-[#070707]">
-                    {/* Sidebar Navigation */}
-                    <aside className="w-full md:w-64 bg-[#111] border-r border-neutral-900 flex flex-col justify-between p-4">
+                <div className="min-h-screen flex flex-col md:flex-row">
+                    {/* CSM Devil Hunter Sidebar */}
+                    <aside className="w-full md:w-64 csm-card border-r border-red-900/50 flex flex-col justify-between p-4 z-20">
                         <div>
-                            <div className="py-4 px-2 mb-4 border-b border-neutral-900">
-                                <h1 className="text-lg font-black text-red-600 tracking-wider">AARYAV PANNEL</h1>
-                                <p className="text-[10px] text-emerald-500 font-bold mt-0.5">● SYSTEM ONLINE</p>
+                            <div className="py-4 px-2 mb-4 border-b border-red-900/40">
+                                <h1 className="chainsaw-font text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 tracking-widest uppercase">AARYAVxYASH</h1>
+                                <p className="text-[10px] text-orange-400 font-bold mt-1 flex items-center gap-1.5 sub-font">
+                                    <span className="w-2 h-2 rounded-full bg-red-600 animate-ping"></span> CSM ENGINE ACTIVE
+                                </p>
                             </div>
-                            <nav className="flex flex-col gap-1.5">
-                                <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='dashboard'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📊 Dashboard</button>
-                                <button onClick={()=>setActiveTab('accounts')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='accounts'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👤 Accounts Manager</button>
-                                <button onClick={()=>setActiveTab('spam')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='spam'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>⚡ DM Spam Tool</button>
-                                <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='nclock'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🛡️ NC Lock (Title)</button>
-                                <button onClick={()=>setActiveTab('groups')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='groups'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👥 Group Creator</button>
-                                <button onClick={()=>setActiveTab('analytics')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='analytics'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📈 Analytics</button>
+                            <nav className="flex flex-col gap-2">
+                                <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='dashboard'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🩸 Dashboard</button>
+                                <button onClick={()=>setActiveTab('accounts')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='accounts'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>👤 Devil Vault</button>
+                                <button onClick={()=>setActiveTab('spam')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='spam'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🔥 DM Chainsaw Spam</button>
+                                <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='nclock'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🪚 NC Lock (Devil Title)</button>
+                                <button onClick={()=>setActiveTab('groups')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='groups'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>👥 Group Forge</button>
                             </nav>
                         </div>
-                        <div className="pt-4 border-t border-neutral-900 flex flex-col gap-3">
-                            <div className="bg-black p-2.5 rounded border border-neutral-900 text-[11px]">
-                                <span className="text-neutral-500 block">Active Account:</span>
-                                <span className="text-red-500 font-bold">{activeNode ? '@'+activeNode.username : 'None Selected'}</span>
+                        <div className="pt-4 border-t border-red-900/40 flex flex-col gap-3">
+                            <div className="bg-black/80 p-3 rounded-xl border border-red-600/30 text-[11px]">
+                                <span className="text-gray-500 block text-[10px] uppercase font-bold">Bound Devil Account:</span>
+                                <span className="text-orange-400 font-bold truncate block">{activeNode ? '@'+activeNode.username : 'No Contract Active'}</span>
                             </div>
-                            <button onClick={()=>{setIsLoggedIn(false); localStorage.removeItem('panel_logged');}} className="bg-neutral-900 hover:bg-neutral-800 text-neutral-400 py-2 rounded text-xs font-bold uppercase">Logout</button>
+                            <button onClick={()=>{setIsLoggedIn(false); localStorage.removeItem('panel_logged');}} className="bg-red-950/60 hover:bg-red-900/80 text-red-300 border border-red-800/50 py-2.5 rounded-xl text-xs font-bold uppercase transition sub-font">Sever Contract (Logout)</button>
                         </div>
                     </aside>
 
-                    {/* Main Content Area */}
-                    <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full">
-                        <header className="flex justify-between items-center bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                    {/* Main Workspace Area */}
+                    <main className="flex-1 p-6 flex flex-col gap-6 max-w-5xl mx-auto w-full z-10">
+                        <header className="flex justify-between items-center csm-card p-4 rounded-2xl border-orange-600/30">
                             <div>
-                                <h2 className="text-sm font-black uppercase tracking-wider text-red-500">{activeTab.toUpperCase()} PANEL</h2>
-                                <p className="text-xs text-neutral-500">Manage automation tasks and active threads effortlessly.</p>
+                                <h2 className="chainsaw-font text-base font-black uppercase tracking-widest text-orange-500">{activeTab.toUpperCase()} DEVIL MODULE</h2>
+                                <p className="text-xs text-gray-400 sub-font">Execute high-speed thread operations with Denji's power.</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-neutral-400">Selected ID:</span>
-                                <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded px-2.5 py-1 text-xs text-red-400 font-bold outline-none">
-                                    {nodes.length === 0 ? <option>No Accounts Added</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
+                                <span className="text-xs text-gray-400 sub-font">Active Account:</span>
+                                <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-red-600/40 rounded-xl px-3 py-2 text-xs text-orange-400 font-bold outline-none">
+                                    {nodes.length === 0 ? <option>No Accounts Linked</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
                                 </select>
                             </div>
                         </header>
@@ -258,37 +268,34 @@
                         {activeTab === 'dashboard' && (
                             <div className="flex flex-col gap-6">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-xs uppercase font-bold">Connected Accounts</span>
-                                        <h3 className="text-2xl font-black text-white mt-1">{nodes.length}</h3>
+                                    <div className="csm-card p-5 rounded-2xl border-red-600/40">
+                                        <span className="text-gray-400 text-xs uppercase font-bold sub-font">Linked Devil Accounts</span>
+                                        <h3 className="text-3xl font-black text-white mt-1 chainsaw-font">{nodes.length}</h3>
                                     </div>
-                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-xs uppercase font-bold">Active Processes</span>
-                                        <h3 className="text-2xl font-black text-red-500 mt-1">{activeTasks.length}</h3>
+                                    <div className="csm-card p-5 rounded-2xl border-orange-600/40">
+                                        <span className="text-gray-400 text-xs uppercase font-bold sub-font">Active Chainsaw Tasks</span>
+                                        <h3 className="text-3xl font-black text-orange-500 mt-1 chainsaw-font">{activeTasks.length}</h3>
                                     </div>
-                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Uptime</span>
-                                        <h3 className="text-2xl font-black text-emerald-500 mt-1">Operational</h3>
+                                    <div className="csm-card p-5 rounded-2xl border-red-600/40">
+                                        <span className="text-gray-400 text-xs uppercase font-bold sub-font">Devil Power Uptime</span>
+                                        <h3 className="text-3xl font-black text-red-500 mt-1 chainsaw-font">100% BLOOD</h3>
                                     </div>
                                 </div>
 
-                                <div className="bg-[#111] border border-neutral-900 p-5 rounded-xl flex flex-col gap-3">
-                                    <h3 className="text-xs font-bold text-red-500 uppercase">Live Running Background Processes</h3>
+                                <div className="csm-card p-6 rounded-2xl flex flex-col gap-3 border-red-600/30">
+                                    <h3 className="text-xs font-bold text-red-400 uppercase tracking-widest sub-font">Active Background Devil Processes</h3>
                                     {activeTasks.length === 0 ? (
-                                        <p className="text-xs text-neutral-600 italic">No tasks currently active.</p>
+                                        <p className="text-xs text-gray-500 italic">No chainsaw workers currently ripping through threads.</p>
                                     ) : (
                                         <div className="flex flex-col gap-2">
                                             {activeTasks.map(t => (
-                                                <div key={t.task_id} className="flex justify-between items-center bg-black p-3 border border-neutral-900 rounded-lg">
+                                                <div key={t.task_id} className="flex justify-between items-center bg-black/80 p-3.5 border border-red-900/60 rounded-xl">
                                                     <div className="text-xs flex items-center gap-3">
-                                                        <span className="bg-red-950 text-red-400 font-bold px-2 py-0.5 rounded text-[10px]">{t.type.toUpperCase()}</span>
-                                                        <span className="text-neutral-300 font-bold">@{t.username}</span>
-                                                        <span className="text-neutral-500">Thread: {t.thread_id}</span>
-                                                        <span className="text-neutral-600 text-[10px]">({t.started_at})</span>
+                                                        <span className="bg-red-950 text-red-400 border border-red-700/50 font-bold px-2.5 py-0.5 rounded-lg text-[10px] sub-font">{t.type.toUpperCase()}</span>
+                                                        <span className="text-orange-300 font-bold">@{t.username}</span>
+                                                        <span className="text-gray-500 font-mono">Thread: {t.thread_id}</span>
                                                     </div>
-                                                    <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase transition">
-                                                        Terminate
-                                                    </button>
+                                                    <button onClick={() => stopTask(t.task_id)} className="bg-red-900/80 hover:bg-red-700 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-lg uppercase transition sub-font">Terminate Task</button>
                                                 </div>
                                             ))}
                                         </div>
@@ -297,31 +304,34 @@
                             </div>
                         )}
 
-                        {/* ACCOUNTS TAB */}
+                        {/* ACCOUNTS VAULT TAB */}
                         {activeTab === 'accounts' && (
-                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-6 max-w-2xl">
+                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-6 max-w-2xl border-red-600/40">
                                 <div>
-                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">Add Instagram Account</h3>
-                                    <p className="text-xs text-neutral-500 mb-4">Paste sessionid cookie below to link account.</p>
+                                    <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase mb-1">Devil Contract Vault</h3>
+                                    <p className="text-xs text-gray-400 mb-4 sub-font">Bind session IDs to switch seamlessly between target accounts.</p>
                                     <form onSubmit={handleAddAccount} className="flex gap-2">
-                                        <input type="text" placeholder="Paste sessionid..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs flex-1 outline-none text-white focus:border-red-600"/>
-                                        <button type="submit" disabled={isVerifying} className="bg-red-600 text-white px-5 py-3 rounded text-xs font-bold hover:bg-red-700 transition">{isVerifying ? 'Verifying...' : '+ Connect ID'}</button>
+                                        <input type="text" placeholder="Paste sessionid cookie..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs flex-1 outline-none text-orange-400 focus:border-red-500 transition"/>
+                                        <button type="submit" disabled={isVerifying} className="bg-gradient-to-r from-red-600 to-orange-600 text-white px-5 py-3 rounded-xl text-xs font-bold hover:opacity-95 transition sub-font">{isVerifying ? 'Binding Contract...' : '+ Bind Session ID'}</button>
                                     </form>
                                 </div>
 
-                                <div className="border-t border-neutral-900 pt-4">
-                                    <h3 className="text-xs font-bold text-neutral-400 uppercase mb-3">Linked Accounts List</h3>
+                                <div className="border-t border-red-900/40 pt-4">
+                                    <h3 className="text-xs font-bold text-gray-400 uppercase mb-3 sub-font">Bound Contract List</h3>
                                     {nodes.length === 0 ? (
-                                        <p className="text-xs text-neutral-600 italic">No accounts linked yet.</p>
+                                        <p className="text-xs text-gray-500 italic">No active contracts bound yet.</p>
                                     ) : (
                                         <div className="flex flex-col gap-2">
                                             {nodes.map(n => (
-                                                <div key={n.id} className="flex justify-between items-center bg-black p-3 border border-neutral-900 rounded-lg">
+                                                <div key={n.id} className="flex justify-between items-center bg-black/80 p-3.5 border border-red-900/60 rounded-xl">
                                                     <div className="text-xs">
-                                                        <span className="text-red-500 font-bold">@{n.username}</span>
-                                                        <span className="text-neutral-600 ml-2 font-mono text-[10px]">ID: {n.id}</span>
+                                                        <span className="text-orange-400 font-bold">@{n.username}</span>
+                                                        <span className="text-gray-500 ml-3 font-mono text-[10px]">ID: {n.id}</span>
                                                     </div>
-                                                    <button onClick={()=>removeAccount(n.id)} className="bg-neutral-900 hover:bg-red-950 text-neutral-400 hover:text-red-500 text-[10px] font-bold px-3 py-1 rounded transition">Remove</button>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={()=>setSelectedNodeId(n.id)} className={`text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase transition sub-font ${selectedNodeId===n.id ? 'bg-orange-600 text-black' : 'bg-red-950/80 text-gray-300 hover:bg-red-900'}`}>{selectedNodeId===n.id ? 'Active' : 'Switch'}</button>
+                                                        <button onClick={()=>removeAccount(n.id)} className="bg-black hover:bg-red-950 text-red-500 text-[10px] font-bold px-3 py-1.5 rounded-lg transition border border-red-900/60">Sever</button>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -330,210 +340,136 @@
                             </div>
                         )}
 
-                        {/* SPAM TAB WITH PAYLOAD MATRIX & JSON UPLOADER */}
+                        {/* SPAM TAB */}
                         {activeTab === 'spam' && (
-                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
-                                <h3 className="text-sm font-bold text-red-500 uppercase">Direct Message Campaign & Matrix</h3>
+                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-orange-600/40">
+                                <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase">Chainsaw DM Blitz Campaign</h3>
                                 <div className="flex flex-col gap-3">
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Target Thread / Group ID</label>
-                                        <input type="text" placeholder="e.g. 3402823668..." value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Thread ID</label>
+                                        <input type="text" placeholder="e.g. 2605643833284076" value={spamThread} onChange={e=>setSpamThread(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
                                     </div>
-
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Target Username (For &#123;target&#125; replacement)</label>
-                                        <input type="text" placeholder="e.g. target_username" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Name (For &#123;target&#125; replacement)</label>
+                                        <input type="text" placeholder="e.g. target_name" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
                                     </div>
-
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Delay Interval (Seconds)</label>
-                                        <input type="text" placeholder="3.5" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Delay Interval (Seconds)</label>
+                                        <input type="text" placeholder="3.5" value={spamJitter} onChange={e=>setSpamJitter(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
                                     </div>
-
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Payload Profile Matrix</label>
-                                        <select 
-                                            value={payloadProfile} 
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setPayloadProfile(val);
-                                                
-                                                if (val === 'alpha') {
-                                                    setSpamPayload(
-                                                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                                                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                                                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                                                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                                                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                                                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                                                        "{target} 𝐀𝐖𝐒 𝐔𝐒𝐄𝐑 𝐓𝐔𝐌 𝐆𝐑𝐄𝐄𝐁𝐎 𝐊𝐎 𝐂𝐇𝐎𝐃𝐔🚮\n\n" +
-                                                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                                                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                                                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                                                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                                                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                                                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                                                        "{target} 𝐒𝐄 𝐌𝐈𝐋𝐎 𝐈𝐍𝐇𝐎𝐍𝐄 𝐂𝐇𝐔𝐃𝐍𝐄 𝐊𝐀 𝐂𝐎𝐔𝐑𝐒𝐄 𝐊𝐈𝐀 𝐇𝐀𝐈🐉🩷\n\n" +
-                                                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                                                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                                                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                                                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                                                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                                                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻\n\n" +
-                                                        "{target} ƘƲƬƬƖ ⱠƛƓƛƠ ƛƤƝƖ ƓƛƝƊ Ƙƛ ȤƠƦ 👻"
-                                                    );
-                                                }
-                                                else if (val === 'beta') setSpamPayload("Beta profile message 1\nBeta profile message 2");
-                                                else if (val === 'gamma') setSpamPayload("Gamma style message 1\nGamma style message 2");
-                                                else if (val === 'delta') setSpamPayload("Unicode flood 1 ⚡\nUnicode flood 2 🔥");
-                                                else if (val === 'custom') setSpamPayload(""); // Blank for custom typing
-                                            }} 
-                                            className="bg-black border border-neutral-800 rounded p-3 text-xs w-full text-red-400 font-bold outline-none"
-                                        >
-                                            <option value="alpha">Profile Alpha (Heavy Abuse)</option>
-                                            <option value="beta">Profile Beta (Compact Text)</option>
-                                            <option value="gamma">Profile Gamma (Stylized UI)</option>
-                                            <option value="delta">Profile Delta (Unicode Flood)</option>
-                                            <option value="json">📁 My Uploaded JSON Payloads</option>
-                                            <option value="custom">Custom Operator Lines</option>
-                                        </select>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Message Payload Lines</label>
+                                        <textarea rows="5" value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-300 font-mono"></textarea>
                                     </div>
-
-                                    {payloadProfile === 'json' && (
-                                        <div className="bg-black border border-neutral-800 p-3 rounded flex flex-col gap-2">
-                                            <label className="text-[10px] text-neutral-400 uppercase font-bold">Upload JSON Payload File</label>
-                                            <input 
-                                                type="file" 
-                                                accept=".json" 
-                                                onChange={e => {
-                                                    const file = e.target.files[0];
-                                                    if(file) {
-                                                        const reader = new FileReader();
-                                                        reader.onload = (ev) => {
-                                                            try {
-                                                                const jsonData = JSON.parse(ev.target.result);
-                                                                const messages = Array.isArray(jsonData) ? jsonData.join('\n') : (jsonData.messages ? jsonData.messages.join('\n') : JSON.stringify(jsonData, null, 2));
-                                                                setSpamPayload(messages);
-                                                                alert('JSON payload loaded!');
-                                                            } catch(err) { alert('Invalid JSON file format!'); }
-                                                        };
-                                                        reader.readAsText(file);
-                                                    }
-                                                }} 
-                                                className="text-xs text-neutral-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-bold file:bg-red-600 file:text-white cursor-pointer"
-                                            />
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Message Payload Lines / Custom Text</label>
-                                        <textarea rows="5" placeholder="Select 'Custom Operator Lines' to type your custom message with &#123;target&#125;..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white font-mono"></textarea>
-                                    </div>
-                                    <button onClick={startSpam} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">Launch Campaign</button>
+                                    <button onClick={startSpam} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">
+                                        🪚 Unleash Chainsaw Blitz
+                                    </button>
                                 </div>
                             </div>
                         )}
 
                         {/* NC LOCK TAB */}
                         {activeTab === 'nclock' && (
-                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
-                                <h3 className="text-sm font-bold text-red-500 uppercase">Group Name Protection (NC Lock)</h3>
+                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-red-600/40">
+                                <h3 className="chainsaw-font text-base font-bold text-red-500 uppercase">NC Lock (Group Title Rotation)</h3>
+                                <p className="text-xs text-red-400/80 sub-font">⚠️ Do NOT use `<` in title base to prevent API parameters rejection.</p>
                                 <div className="flex flex-col gap-3">
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Group Thread ID</label>
-                                        <input type="text" placeholder="Thread ID" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Thread ID</label>
+                                        <input type="text" placeholder="e.g. 2605643833284076" value={ncThread} onChange={e=>setNcThread(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Protected Base Title</label>
-                                        <input type="text" placeholder="Title Base" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Title Base (Clean text without `<`)</label>
+                                        <input type="text" placeholder="e.g. REHAND ON TOP" value={ncText} onChange={e=>setNcText(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Rotation Delay (Seconds)</label>
-                                        <input type="text" placeholder="4.0" value={ncJitter} onChange={e=>setNcJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Rotation Jitter (Seconds)</label>
+                                        <input type="text" placeholder="4.0" value={ncJitter} onChange={e=>setNcJitter(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
                                     </div>
-                                    <button onClick={startNcLock} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">Enable NC Lock Worker</button>
+                                    <button onClick={startNcLock} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-red sub-font text-white">
+                                        🩸 Activate NC Lock Worker
+                                    </button>
                                 </div>
                             </div>
                         )}
 
                         {/* GROUP CREATOR TAB */}
                         {activeTab === 'groups' && (
-                            <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
-                                <h3 className="text-sm font-bold text-red-500 uppercase">Automated Group Creator</h3>
-                                <form onSubmit={handleCreateGroup} className="flex flex-col gap-3">
+                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-orange-600/40">
+                                <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase">Group Forge</h3>
+                                <div className="flex flex-col gap-3">
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Group Title</label>
-                                        <input type="text" placeholder="Group Name" value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Group Title</label>
+                                        <input type="text" placeholder="Enter title..." value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Member Usernames (One per line)</label>
-                                        <textarea rows="5" placeholder="user1&#10;user2" value={groupMembers} onChange={e=>setGroupMembers(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none resize-none text-white"></textarea>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Member Usernames (one per line)</label>
+                                        <textarea rows="4" placeholder="username1\nusername2" value={groupMembers} onChange={e=>setGroupMembers(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400 font-mono"></textarea>
                                     </div>
-                                    <button type="submit" disabled={isCreatingGroup} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition mt-2">
-                                        {isCreatingGroup ? 'Creating...' : 'Create Instagram Group'}
-                                    </button>
-                                </form>
-                            </div>
-                        )}
-
-                        {/* ANALYTICS TAB */}
-                        {activeTab === 'analytics' && (
-                            <div className="flex flex-col gap-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Total Dispatched</span>
-                                        <h3 className="text-2xl font-black text-white mt-1">1,428</h3>
-                                        <span className="text-emerald-500 text-[10px] font-bold mt-2 block">↑ 12% speed rate</span>
-                                    </div>
-                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Active Sessions</span>
-                                        <h3 className="text-2xl font-black text-red-500 mt-1">{nodes.length}</h3>
-                                        <span className="text-neutral-400 text-[10px] mt-2 block">All synced</span>
-                                    </div>
-                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Error Rate</span>
-                                        <h3 className="text-2xl font-black text-emerald-500 mt-1">0.0%</h3>
-                                        <span className="text-neutral-400 text-[10px] mt-2 block">Android UA stable</span>
-                                    </div>
-                                    <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-[10px] uppercase font-bold">Uptime</span>
-                                        <h3 className="text-2xl font-black text-white mt-1">99.9%</h3>
-                                        <span className="text-emerald-500 text-[10px] font-bold mt-2 block">Heartbeat active</span>
-                                    </div>
-                                </div>
-
-                                <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4">
-                                    <h3 className="text-xs font-bold text-red-500 uppercase">Live Campaign Performance</h3>
-                                    {activeTasks.length === 0 ? (
-                                        <p className="text-xs text-neutral-600 italic">No active campaigns to visualize telemetry data for.</p>
-                                    ) : (
-                                        <div className="flex flex-col gap-4">
-                                            {activeTasks.map(t => (
-                                                <div key={t.task_id} className="bg-black border border-neutral-900 p-4 rounded-lg flex flex-col gap-3">
-                                                    <div className="flex justify-between items-center text-xs">
-                                                        <span className="font-bold text-red-400">Campaign: {t.type.toUpperCase()} (@{t.username})</span>
-                                                        <span className="text-neutral-500 font-mono">Thread ID: {t.thread_id}</span>
-                                                    </div>
-                                                    <div className="w-full bg-neutral-900 h-2 rounded-full overflow-hidden">
-                                                        <div className="bg-red-600 h-full w-3/4 animate-pulse"></div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                    <button onClick={(e)=>{
+                                        e.preventDefault();
+                                        const node = nodes.find(n => n.id === selectedNodeId);
+                                        if(!node) return alert('Select an Account first');
+                                        if(!groupTitle || !groupMembers) return alert('Enter Title and Usernames');
+                                        setIsCreatingGroup(true);
+                                        fetch('/api/group/create', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({ session_id: node.sessionid, title: groupTitle, usernames: groupMembers.split('\n') })
+                                        }).then(res => res.json()).then(data => {
+                                            setIsCreatingGroup(false);
+                                            if(data.status === 'success') { alert(`Devil Group Forged! Thread ID: ${data.thread_id}`); setGroupTitle(''); setGroupMembers(''); }
+                                            else alert(data.message);
+                                        }).catch(()=>{ setIsCreatingGroup(false); alert('Error creating group'); });
+                                    }} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">{isCreatingGroup ? 'Forging Group...' : 'Forge Group Thread'}</button>
                                 </div>
                             </div>
                         )}
-
-                        {/* Terminal Telemetry Logs */}
-                        <div className="bg-black border border-neutral-900 p-4 rounded-xl font-mono text-[11px] h-40 overflow-y-auto text-red-500 shadow-inner">
-                            <div className="text-neutral-600 border-b border-neutral-900 pb-1 mb-2 font-bold">[REAL-TIME TELEMETRY LOGS]</div>
-                            {logs.map((lg, i) => <div key={i}>{lg}</div>)}
-                        </div>
                     </main>
                 </div>
             );
         }
+
+        // CSM Crimson Blood & Ember Canvas Effect
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        for(let i=0; i<60; i++) {
+            particles.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                radius: Math.random() * 2 + 0.5,
+                vx: (Math.random() - 0.5) * 0.6,
+                vy: (Math.random() - 1) * 0.8,
+                color: Math.random() > 0.4 ? 'rgba(239, 68, 68, 0.5)' : 'rgba(249, 115, 22, 0.6)'
+            });
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach((p) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if(p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if(p.y < 0) p.y = canvas.height;
+
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
 
         ReactDOM.render(<App />, document.getElementById('root'));
     </script>
