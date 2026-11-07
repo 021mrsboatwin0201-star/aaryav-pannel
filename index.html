@@ -8,7 +8,6 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Chart.js for Live Analytics Graph -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-[#070707] text-white font-sans antialiased overflow-x-hidden">
@@ -26,7 +25,6 @@
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
-            // In-UI Status Notification System
             const [statusMsg, setStatusMsg] = React.useState(null);
 
             const showNotify = (text, type = 'info') => {
@@ -41,9 +39,9 @@
             const [spamPayload, setSpamPayload] = React.useState('');
             const [payloadProfile, setPayloadProfile] = React.useState('Aws users');
 
-            // Multi-Target Mass Queue State
-            const [massTargets, setMassTargets] = React.useState('');
-            const [massJitter, setMassJitter] = React.useState('3.5');
+            // Swarm State
+            const [swarmThread, setSwarmThread] = React.useState('');
+            const [swarmJitter, setSwarmJitter] = React.useState('3.5');
 
             // NC Lock State
             const [ncThread, setNcThread] = React.useState('');
@@ -58,8 +56,6 @@
             const [activeTasks, setActiveTasks] = React.useState([]);
             const [logs, setLogs] = React.useState([]);
 
-            // Chart Reference
-            const chartRef = React.useRef(null);
             const chartInstance = React.useRef(null);
 
             React.useEffect(() => {
@@ -91,7 +87,6 @@
                 return () => clearInterval(interval);
             }, [isLoggedIn]);
 
-            // Initialize Analytics Chart when tab is open
             React.useEffect(() => {
                 if(activeTab === 'analytics') {
                     const ctx = document.getElementById('statsChart');
@@ -103,7 +98,7 @@
                                 labels: ['10m ago', '8m ago', '6m ago', '4m ago', '2m ago', 'Now'],
                                 datasets: [{
                                     label: 'Messages Sent / min',
-                                    data: [12, 28, 45, 60, 85, activeTasks.length > 0 ? 110 : 10],
+                                    data: [12, 28, 45, 60, 85, activeTasks.length > 0 ? 150 : 10],
                                     borderColor: '#dc2626',
                                     backgroundColor: 'rgba(220, 38, 38, 0.1)',
                                     fill: true,
@@ -192,26 +187,25 @@
                         jitter: spamJitter, 
                         payload: [spamPayload] 
                     })
-                }).then(()=>showNotify('Campaign Launched with Multiline Payload! 🔥', 'success'));
+                }).then(()=>showNotify('Campaign Launched! 🔥', 'success'));
             };
 
-            const startMassQueue = () => {
-                const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return showNotify('Select an Account first', 'error');
-                if(!massTargets || !spamPayload) return showNotify('Fill Mass Target IDs & Payload', 'error');
-                
+            const startSwarmAttack = () => {
+                if(nodes.length === 0) return showNotify('Link at least one account for Swarm Attack', 'error');
+                if(!swarmThread || !spamPayload) return showNotify('Fill Thread ID & Payload', 'error');
+
                 fetch('/api/task/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        type: 'mass_queue', 
-                        session_id: node.sessionid, 
-                        username: node.username,
-                        targets: massTargets.split('\n').filter(t => t.trim()), 
-                        jitter: massJitter, 
-                        payload: [spamPayload] 
+                        type: 'swarm_spam',
+                        accounts: nodes,
+                        thread_id: swarmThread,
+                        target: spamTargetName,
+                        jitter: swarmJitter,
+                        payload: [spamPayload]
                     })
-                }).then(()=>showNotify('Multi-Target Mass Queue Deployed! 🚀', 'success'));
+                }).then(() => showNotify(`🐝 Swarm Attack Deployed across ${nodes.length} accounts!`, 'success'));
             };
 
             const startNcLock = () => {
@@ -291,7 +285,7 @@
                                 <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='dashboard'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📊 Dashboard</button>
                                 <button onClick={()=>setActiveTab('accounts')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='accounts'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👤 Accounts Manager</button>
                                 <button onClick={()=>setActiveTab('spam')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='spam'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>⚡ DM Spam Tool</button>
-                                <button onClick={()=>setActiveTab('massqueue')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='massqueue'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🎯 Multi-Target Queue</button>
+                                <button onClick={()=>setActiveTab('swarm')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='swarm'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🐝 Swarm Attack</button>
                                 <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='nclock'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🛡️ NC Lock (Title)</button>
                                 <button onClick={()=>setActiveTab('groups')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='groups'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👥 Group Creator</button>
                                 <button onClick={()=>setActiveTab('analytics')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='analytics'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📈 Analytics & Charts</button>
@@ -357,7 +351,7 @@
                                                     <div className="text-xs flex items-center gap-3">
                                                         <span className="bg-red-950 text-red-400 font-bold px-2 py-0.5 rounded text-[10px]">{t.type.toUpperCase()}</span>
                                                         <span className="text-neutral-300 font-bold">@{t.username}</span>
-                                                        <span className="text-neutral-500">Thread: {t.thread_id || 'Mass Queue'}</span>
+                                                        <span className="text-neutral-500">Thread: {t.thread_id}</span>
                                                         <span className="text-neutral-600 text-[10px]">({t.started_at})</span>
                                                     </div>
                                                     <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase transition">Terminate</button>
@@ -382,7 +376,7 @@
                                 </div>
 
                                 <div className="border-t border-neutral-900 pt-4">
-                                    <h3 className="text-xs font-bold text-neutral-400 uppercase mb-3">Linked Accounts List</h3>
+                                    <h3 className="text-xs font-bold text-neutral-400 uppercase mb-3">Linked Accounts List ({nodes.length})</h3>
                                     {nodes.length === 0 ? (
                                         <p className="text-xs text-neutral-600 italic">No accounts linked yet.</p>
                                     ) : (
@@ -490,9 +484,7 @@
                                                         "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤"
                                                     );
                                                 }
-                                                } else if (val === 'json' || val === 'custom') {
-                                                    setSpamPayload(""); 
-                                                }
+                                                else if (val === 'json' || val === 'custom') setSpamPayload(""); 
                                             }} 
                                             className="bg-black border border-neutral-800 rounded p-3 text-xs w-full text-red-400 font-bold outline-none"
                                         >
@@ -536,26 +528,30 @@
                                         <textarea rows="6" value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white font-mono"></textarea>
                                     </div>
 
-                                    <button onClick={startSpam} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">Launch Multiline Campaign</button>
+                                    <button onClick={startSpam} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">Launch Single Campaign</button>
                                 </div>
                             </div>
                         )}
 
-                        {/* NEW FEATURE #3: MULTI-TARGET MASS QUEUE TAB */}
-                        {activeTab === 'massqueue' && (
+                        {/* SWARM ATTACK TAB */}
+                        {activeTab === 'swarm' && (
                             <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
-                                <h3 className="text-sm font-bold text-red-500 uppercase">🎯 Multi-Target Mass Queue Operations</h3>
-                                <p className="text-xs text-neutral-500">Add multiple target thread IDs or usernames (one per line). The bot will loop through all targets automatically.</p>
+                                <h3 className="text-sm font-bold text-red-500 uppercase">🐝 Account Swarm Attack (Simultaneous Raid)</h3>
+                                <p className="text-xs text-neutral-500">This will launch all your linked accounts ({nodes.length} accounts) simultaneously onto a single target thread!</p>
                                 <div className="flex flex-col gap-3">
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Target List (One Thread/User ID per line)</label>
-                                        <textarea rows="5" placeholder="thread_id_1\nthread_id_2\nthread_id_3" value={massTargets} onChange={e=>setMassTargets(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white font-mono"></textarea>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Target Thread ID</label>
+                                        <input type="text" placeholder="e.g. 3402823668..." value={swarmThread} onChange={e=>setSwarmThread(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-neutral-400 mb-1 block">Queue Delay Jitter (Seconds)</label>
-                                        <input type="text" value={massJitter} onChange={e=>setMassJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Delay Jitter (Seconds)</label>
+                                        <input type="text" value={swarmJitter} onChange={e=>setSwarmJitter(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
                                     </div>
-                                    <button onClick={startMassQueue} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">🚀 Deploy Mass Queue Campaign</button>
+                                    <div>
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Active Payload (Uses current Spam Payload text)</label>
+                                        <textarea rows="4" value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white font-mono"></textarea>
+                                    </div>
+                                    <button onClick={startSwarmAttack} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">🚀 Launch Swarm Attack ({nodes.length} Accounts)</button>
                                 </div>
                             </div>
                         )}
@@ -600,7 +596,7 @@
                             </div>
                         )}
 
-                        {/* NEW FEATURE #2: ANALYTICS & CHARTS TAB */}
+                        {/* ANALYTICS TAB */}
                         {activeTab === 'analytics' && (
                             <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-6 max-w-3xl w-full">
                                 <h3 className="text-sm font-bold text-red-500 uppercase">📈 Live Performance Analytics & Charts</h3>
