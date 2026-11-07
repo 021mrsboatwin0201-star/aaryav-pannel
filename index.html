@@ -14,21 +14,14 @@
         .chainsaw-font { font-family: 'Cinzel', serif; }
         .sub-font { font-family: 'Space Grotesk', sans-serif; }
         
-        /* Chainsaw Man Blood & Cord Accent Styles */
         .csm-card {
             background: rgba(18, 6, 6, 0.88);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(239, 68, 68, 0.3);
             box-shadow: 0 0 25px rgba(239, 68, 68, 0.15);
         }
-        .csm-card-orange {
-            background: rgba(20, 10, 5, 0.9);
-            border: 1px solid rgba(249, 115, 22, 0.4);
-            box-shadow: 0 0 25px rgba(249, 115, 22, 0.15);
-        }
         .chainsaw-glow-red { box-shadow: 0 0 20px rgba(220, 38, 38, 0.6); }
         .chainsaw-glow-orange { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); }
-        .saw-border { border-style: dashed; border-color: #ef4444; }
         
         canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none; }
         ::-webkit-scrollbar { width: 6px; }
@@ -37,7 +30,6 @@
     </style>
 </head>
 <body class="bg-[#070303] text-white font-sans antialiased">
-    <!-- Live Blood & Spark Canvas Grid -->
     <canvas id="bgCanvas"></canvas>
     <div id="root"></div>
 
@@ -53,7 +45,7 @@
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
-            // Spam & Matrix State
+            // Spam & Matrix State (Instagrapi)
             const [spamThread, setSpamThread] = React.useState('');
             const [spamTargetName, setSpamTargetName] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
@@ -69,6 +61,12 @@
             const [groupTitle, setGroupTitle] = React.useState('');
             const [groupMembers, setGroupMembers] = React.useState('');
             const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
+
+            // Playwright Blitz State
+            const [pwUrl, setPwUrl] = React.useState('');
+            const [pwTarget, setPwTarget] = React.useState('target');
+            const [pwUsername, setPwUsername] = React.useState('playwright_user');
+            const [pwProfileDir, setPwProfileDir] = React.useState('acc_1');
 
             const [activeTasks, setActiveTasks] = React.useState([]);
             const [logs, setLogs] = React.useState([]);
@@ -178,6 +176,21 @@
                 }).then(()=>alert('Devil NC Lock Protocol Engaged! 🪚'));
             };
 
+            const startPlaywrightBlitz = () => {
+                if(!pwUrl) return alert('Enter GC / DM Link or Thread ID');
+                fetch('/api/task/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        type: 'playwright_spam',
+                        url: pwUrl.startsWith("http") ? pwUrl : `https://www.instagram.com/direct/t/${pwUrl}`,
+                        target: pwTarget,
+                        username: pwUsername,
+                        profile_dir: pwProfileDir
+                    })
+                }).then(()=>alert('🚀 Playwright High-Speed Blitz Started!'));
+            };
+
             const stopTask = (tid) => {
                 fetch('/api/task/stop', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -236,6 +249,7 @@
                                 <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='dashboard'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🩸 Dashboard</button>
                                 <button onClick={()=>setActiveTab('accounts')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='accounts'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>👤 Devil Vault</button>
                                 <button onClick={()=>setActiveTab('spam')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='spam'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🔥 DM Chainsaw Spam</button>
+                                <button onClick={()=>setActiveTab('playwright')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='playwright'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🚀 Playwright Blitz</button>
                                 <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='nclock'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>🪚 NC Lock (Devil Title)</button>
                                 <button onClick={()=>setActiveTab('groups')} className={`text-left px-3.5 py-3 rounded-xl text-xs font-bold uppercase transition sub-font ${activeTab==='groups'?'bg-gradient-to-r from-red-700 to-orange-600 text-white chainsaw-glow-red':'text-gray-400 hover:bg-red-950/40'}`}>👥 Group Forge</button>
                             </nav>
@@ -293,7 +307,7 @@
                                                     <div className="text-xs flex items-center gap-3">
                                                         <span className="bg-red-950 text-red-400 border border-red-700/50 font-bold px-2.5 py-0.5 rounded-lg text-[10px] sub-font">{t.type.toUpperCase()}</span>
                                                         <span className="text-orange-300 font-bold">@{t.username}</span>
-                                                        <span className="text-gray-500 font-mono">Thread: {t.thread_id}</span>
+                                                        <span className="text-gray-500 font-mono">Thread: {t.thread_id || t.url || 'N/A'}</span>
                                                     </div>
                                                     <button onClick={() => stopTask(t.task_id)} className="bg-red-900/80 hover:bg-red-700 text-white text-[10px] font-bold px-3.5 py-1.5 rounded-lg uppercase transition sub-font">Terminate Task</button>
                                                 </div>
@@ -340,7 +354,7 @@
                             </div>
                         )}
 
-                        {/* SPAM TAB */}
+                        {/* SPAM TAB (INSTAGRAPI) */}
                         {activeTab === 'spam' && (
                             <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-orange-600/40">
                                 <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase">Chainsaw DM Blitz Campaign</h3>
@@ -363,6 +377,35 @@
                                     </div>
                                     <button onClick={startSpam} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">
                                         🪚 Unleash Chainsaw Blitz
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* PLAYWRIGHT BLITZ TAB */}
+                        {activeTab === 'playwright' && (
+                            <div className="csm-card p-6 rounded-2xl flex flex-col gap-4 max-w-2xl border-red-600/40">
+                                <h3 className="chainsaw-font text-base font-bold text-orange-500 uppercase">🚀 Playwright High-Speed Spammer</h3>
+                                <p className="text-xs text-gray-400 sub-font">Runs browser automation worker from your Python script to blast messages with zero rate-limit blocks.</p>
+                                <div className="flex flex-col gap-3">
+                                    <div>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Thread URL or ID</label>
+                                        <input type="text" placeholder="https://www.instagram.com/direct/t/..." value={pwUrl} onChange={e=>setPwUrl(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Target Name (&#123;t&#125; replacement)</label>
+                                        <input type="text" placeholder="target" value={pwTarget} onChange={e=>setPwTarget(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Operator Tag / Username</label>
+                                        <input type="text" placeholder="playwright_user" value={pwUsername} onChange={e=>setPwUsername(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] text-gray-400 mb-1 block sub-font font-bold uppercase">Profile Directory Folder</label>
+                                        <input type="text" placeholder="acc_1" value={pwProfileDir} onChange={e=>setPwProfileDir(e.target.value)} className="bg-black border border-red-900/60 rounded-xl p-3 text-xs w-full outline-none text-orange-400"/>
+                                    </div>
+                                    <button onClick={startPlaywrightBlitz} className="py-3.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-600 font-bold text-xs uppercase rounded-xl hover:opacity-95 transition tracking-widest mt-2 chainsaw-glow-orange sub-font text-white">
+                                        🚀 Launch Playwright Worker
                                     </button>
                                 </div>
                             </div>
