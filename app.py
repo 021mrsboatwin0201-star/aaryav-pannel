@@ -36,8 +36,6 @@ def verify_account():
     try:
         cl = Client()
         cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
-        
-        # Fixed for modern instagrapi versions
         cl.login_by_sessionid(sessionid)
         
         account_info = cl.account_info()
@@ -54,8 +52,9 @@ def verify_account():
 def start_task():
     data = request.json
     task_type = data.get('type')
-    task_id = str(int(time.time() * 1000))
+    task_id_base = str(int(time.time() * 1000))
     
+    # 1. Single Account Spam
     if task_type == 'spam':
         session_id = data.get('session_id')
         username = data.get('username')
@@ -63,6 +62,7 @@ def start_task():
         target = data.get('target', '')
         jitter = float(data.get('jitter', 3.5))
         payload = data.get('payload', [])
+        task_id = f"{task_id_base}_{username}"
 
         def run_spam():
             try:
@@ -75,7 +75,7 @@ def start_task():
                     for msg in payload:
                         if task_id not in active_tasks:
                             break
-                        formatted_msg = msg.replace('{target}', f"{target}" if target else "")
+                        formatted_msg = msg.replace('{target}', f"@{target}" if target else "")
                         cl.direct_send(formatted_msg, thread_ids=[int(thread_id)])
                         add_log(f"[@{username}] Sent payload block to thread {thread_id}")
                         time.sleep(jitter)
@@ -92,12 +92,54 @@ def start_task():
         task_threads[task_id] = t
         t.start()
 
+    # 2. SWARM ATTACK (All accounts simultaneous spam)
+    elif task_type == 'swarm_spam':
+        accounts = data.get('accounts', []) # List of {username, sessionid}
+        thread_id = data.get('thread_id')
+        target = data.get('target', '')
+        jitter = float(data.get('jitter', 3.5))
+        payload = data.get('payload', [])
+
+        for acc in accounts:
+            acc_user = acc['username']
+            acc_sess = acc['sessionid']
+            task_id = f"{task_id_base}_{acc_user}"
+
+            def run_swarm_account(u, s, tid):
+                try:
+                    cl = Client()
+                    cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
+                    cl.login_by_sessionid(s)
+                    add_log(f"[SWARM @{u}] Spawned and attacking thread {tid}")
+                    
+                    while task_id in active_tasks:
+                        for msg in payload:
+                            if task_id not in active_tasks:
+                                break
+                            formatted_msg = msg.replace('{target}', f"@{target}" if target else "")
+                            cl.direct_send(formatted_msg, thread_ids=[int(tid)])
+                            add_log(f"[SWARM @{u}] Payload delivered to {tid}")
+                            time.sleep(jitter)
+                except Exception as e:
+                    add_log(f"[SWARM @{u}] Error: {str(e)}")
+                finally:
+                    if task_id in active_tasks:
+                        del active_tasks[task_id]
+                    if task_id in task_threads:
+                        del task_threads[task_id]
+
+            active_tasks[task_id] = {"task_id": task_id, "type": "swarm", "username": acc_user, "thread_id": thread_id, "started_at": time.strftime("%H:%M:%S")}
+            t = threading.Thread(target=run_swarm_account, args=(acc_user, acc_sess, thread_id))
+            task_threads[task_id] = t
+            t.start()
+
     elif task_type == 'nclock':
         session_id = data.get('session_id')
         username = data.get('username')
         thread_id = data.get('thread_id')
         nc_text = data.get('nc_text')
         jitter = float(data.get('jitter', 4.0))
+        task_id = f"{task_id_base}_{username}"
 
         def run_nclock():
             try:
@@ -125,7 +167,7 @@ def start_task():
         task_threads[task_id] = t
         t.start()
 
-    return jsonify({"status": "success", "task_id": task_id})
+    return jsonify({"status": "success"})
 
 @app.route('/api/task/stop', methods=['POST'])
 def stop_task():
