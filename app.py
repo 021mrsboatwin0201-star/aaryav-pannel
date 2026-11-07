@@ -1,12 +1,11 @@
+import os
 import time
 import threading
-import traceback
 from flask import Flask, jsonify, request, send_from_directory
 from instagrapi import Client
 
 app = Flask(__name__, static_folder='.')
 
-# Global state for tasks and logs
 active_tasks = {}
 task_threads = {}
 logs = []
@@ -20,7 +19,6 @@ def add_log(message):
 
 @app.route('/ping')
 def ping():
-    """Uptime Robot ping endpoint to keep Render awake 24/7"""
     return jsonify({"status": "alive", "timestamp": time.time()}), 200
 
 @app.route('/')
@@ -30,19 +28,27 @@ def index():
 @app.route('/api/account/verify', methods=['POST'])
 def verify_account():
     data = request.json
-    sessionid = data.get('sessionid')
+    sessionid = data.get('sessionid', '').strip()
+    
+    if not sessionid:
+        return jsonify({"status": "error", "message": "Session ID is required."}), 400
+
     try:
         cl = Client()
-        cl.load_settings({})
-        # Inject sessionid cookie into instagrapi client
+        # Custom User-Agent and headers to bypass strict block
+        cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
         cl.set_sessionid(sessionid)
-        user_id = cl.user_id_from_username(cl.username)
-        username = cl.username
+        
+        # Verify by fetching account info
+        account_info = cl.account_info()
+        username = account_info.username
+        
         add_log(f"Successfully bound contract for @{username}")
         return jsonify({"status": "success", "username": username, "sessionid": sessionid})
     except Exception as e:
-        add_log(f"Account verification failed: {str(e)}")
-        return jsonify({"status": "error", "message": "Invalid Session ID or Challenge Required."}), 400
+        error_msg = str(e)
+        add_log(f"Account verification failed: {error_msg}")
+        return jsonify({"status": "error", "message": f"Session Login Failed: {error_msg}"}), 400
 
 @app.route('/api/task/start', methods=['POST'])
 def start_task():
@@ -54,13 +60,14 @@ def start_task():
         session_id = data.get('session_id')
         username = data.get('username')
         thread_id = data.get('thread_id')
-        target = data.get('target', 'target')
+        target = data.get('target', '')
         jitter = float(data.get('jitter', 3.5))
-        payload = data.get('payload', []) # Receives [spamPayload] single block or array
-        
+        payload = data.get('payload', [])
+
         def run_spam():
             try:
                 cl = Client()
+                cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
                 cl.set_sessionid(session_id)
                 add_log(f"[@{username}] Started DM Spam task on thread {thread_id}")
                 
@@ -70,7 +77,7 @@ def start_task():
                             break
                         formatted_msg = msg.replace('{target}', f"@{target}" if target else "")
                         cl.direct_send(formatted_msg, thread_ids=[int(thread_id)])
-                        add_log(f"[@{username}] Sent payload block to {thread_id}")
+                        add_log(f"[@{username}] Sent payload block to thread {thread_id}")
                         time.sleep(jitter)
             except Exception as e:
                 add_log(f"[@{username}] Spam task crashed: {str(e)}")
@@ -95,6 +102,7 @@ def start_task():
         def run_nclock():
             try:
                 cl = Client()
+                cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
                 cl.set_sessionid(session_id)
                 add_log(f"[@{username}] Started NC Lock on thread {thread_id}")
                 counter = 1
@@ -142,6 +150,7 @@ def create_group():
     usernames = data.get('usernames', [])
     try:
         cl = Client()
+        cl.set_user_agent("Instagram 269.0.0.18.75 Android (31/12; 480dpi; 1080x2280; Xiaomi; Redmi Note 10; mojito; qcom; en_US; 314663841)")
         cl.set_sessionid(session_id)
         user_ids = [cl.user_id_from_username(u.strip()) for u in usernames if u.strip()]
         thread = cl.direct_create_group(user_ids, title)
