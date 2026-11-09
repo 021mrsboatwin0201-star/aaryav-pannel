@@ -25,9 +25,7 @@
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
-            // Selected accounts checkboxes state for Multi-GC & Swarm
             const [selectedAccountIds, setSelectedAccountIds] = React.useState({});
-
             const [statusMsg, setStatusMsg] = React.useState(null);
 
             const showNotify = (text, type = 'info') => {
@@ -35,23 +33,19 @@
                 setTimeout(() => setStatusMsg(null), 4000);
             };
 
-            // Spam & Matrix State
             const [spamThread, setSpamThread] = React.useState('');
             const [spamTargetName, setSpamTargetName] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
             const [spamPayload, setSpamPayload] = React.useState('');
             const [payloadProfile, setPayloadProfile] = React.useState('Aws users');
 
-            // Swarm State
             const [swarmThread, setSwarmThread] = React.useState('');
             const [swarmJitter, setSwarmJitter] = React.useState('3.5');
 
-            // NC Lock State
             const [ncThread, setNcThread] = React.useState('');
             const [ncText, setNcText] = React.useState('');
             const [ncJitter, setNcJitter] = React.useState('4.0');
 
-            // Multi-GC & Mass Creator State
             const [mainFetchSession, setMainFetchSession] = React.useState('');
             const [fetchStatus, setFetchStatus] = React.useState('');
             const [fetchedGCThreads, setFetchedGCThreads] = React.useState([]);
@@ -59,13 +53,11 @@
             const [massAmount, setMassAmount] = React.useState('20');
             const [massUsernames, setMassUsernames] = React.useState('hater_target_1\nhater_target_2');
             
-            // Custom Multi-GC Fight Templates State
             const [globalTargetName, setGlobalTargetName] = React.useState('MONARCH');
             const [ncBoxText, setNcBoxText] = React.useState('{target} GC LEFT LE RANDIKE {emoji}');
             const [spamBoxText, setSpamBoxText] = React.useState('{target} GC LEFT LE RANDIBALA {emoji}');
             const [fightInterval, setFightInterval] = React.useState('300');
 
-            // Group Creator State
             const [groupTitle, setGroupTitle] = React.useState('');
             const [groupMembers, setGroupMembers] = React.useState('');
             const [isCreatingGroup, setIsCreatingGroup] = React.useState(false);
@@ -84,7 +76,6 @@
                         setNodes(parsed);
                         if(parsed.length > 0) {
                             setSelectedNodeId(parsed[0].id);
-                            // Default select all accounts
                             const initialSelected = {};
                             parsed.forEach(n => initialSelected[n.id] = true);
                             setSelectedAccountIds(initialSelected);
@@ -161,10 +152,7 @@
                     setIsVerifying(false);
                     if(data.status === 'success') {
                         const newItem = { id: Date.now().toString(), username: data.username, sessionid: data.sessionid };
-                        setNodes(prev => {
-                            const updated = [...prev, newItem];
-                            return updated;
-                        });
+                        setNodes(prev => [...prev, newItem]);
                         setSelectedAccountIds(prev => ({ ...prev, [newItem.id]: true }));
                         setSelectedNodeId(newItem.id);
                         setInputSessionId('');
@@ -189,7 +177,6 @@
                 setSelectedAccountIds(newObj);
             };
 
-            // Multi-GC Fetcher Action
             const fetchMainGCs = () => {
                 if(!mainFetchSession.trim()) return showNotify('Enter Main Account Session ID!', 'error');
                 setFetchStatus("Fetching GCs from Instagram...");
@@ -211,7 +198,6 @@
                 }).catch(() => { setFetchStatus("Network Error!"); showNotify("Network Error!", 'error'); });
             };
 
-            // Mass GC Creator Action
             const startMassGCCreator = () => {
                 const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]).map(n => n.sessionid);
                 if(accountsToUse.length === 0) return showNotify('Select at least one account via checkboxes!', 'error');
@@ -234,7 +220,6 @@
                 });
             };
 
-            // Save NC Templates
             const saveNCText = () => {
                 fetch('/api/templates/save_nc', {
                     method: 'POST',
@@ -245,7 +230,6 @@
                 .then(data => showNotify(data.message, 'success'));
             };
 
-            // Save Spam Templates
             const saveSpamText = () => {
                 fetch('/api/templates/save_spam', {
                     method: 'POST',
@@ -256,13 +240,11 @@
                 .then(data => showNotify(data.message, 'success'));
             };
 
-            // Start Multi-GC Mega Fight
             const startMultiFight = () => {
                 const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]).map(n => ({ username: n.username, sessionid: n.sessionid }));
                 if(accountsToUse.length === 0) return showNotify('Select at least one connected session!', 'error');
                 if(fetchedGCThreads.length === 0) return showNotify('Fetch GCs first using the Multi-GC Fetcher!', 'error');
 
-                // Auto save templates first just in case
                 saveNCText();
                 saveSpamText();
 
@@ -393,7 +375,7 @@
                         <div>
                             <div className="py-4 px-2 mb-4 border-b border-neutral-900">
                                 <h1 className="text-lg font-black text-red-600 tracking-wider">AARYAV PANNEL</h1>
-                                <p className="text-[10px] text-emerald-500 font-bold mt-0.5">● SYSTEM ONLINE</p>
+                                <p className="text-[10px] text-emerald-500 font-bold mt-0.5">● SYSTEM ONLINE (AUTO-RESUME ACTIVE)</p>
                             </div>
                             <nav className="flex flex-col gap-1.5">
                                 <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='dashboard'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📊 Dashboard</button>
@@ -427,7 +409,7 @@
                         <header className="flex justify-between items-center bg-[#111] border border-neutral-900 p-4 rounded-xl">
                             <div>
                                 <h2 className="text-sm font-black uppercase tracking-wider text-red-500">{activeTab.toUpperCase()} PANEL</h2>
-                                <p className="text-xs text-neutral-500">Manage automation tasks and active threads effortlessly.</p>
+                                <p className="text-xs text-neutral-500">Manage automation tasks with Persistent Auto-Resume protection.</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-xs text-neutral-400">Selected ID:</span>
@@ -450,13 +432,13 @@
                                         <h3 className="text-2xl font-black text-red-500 mt-1">{activeTasks.length}</h3>
                                     </div>
                                     <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Uptime</span>
-                                        <h3 className="text-2xl font-black text-emerald-500 mt-1">Operational</h3>
+                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Uptime & State</span>
+                                        <h3 className="text-2xl font-black text-emerald-500 mt-1">Auto-Restored</h3>
                                     </div>
                                 </div>
 
                                 <div className="bg-[#111] border border-neutral-900 p-5 rounded-xl flex flex-col gap-3">
-                                    <h3 className="text-xs font-bold text-red-500 uppercase">Live Running Background Processes</h3>
+                                    <h3 className="text-xs font-bold text-red-500 uppercase">Live Running Background Processes (Auto-Saved)</h3>
                                     {activeTasks.length === 0 ? (
                                         <p className="text-xs text-neutral-600 italic">No tasks currently active.</p>
                                     ) : (
@@ -521,10 +503,9 @@
                             </div>
                         )}
 
-                        {/* MULTI-GC MEGA FIGHT & CREATOR TAB */}
+                        {/* MULTI-GC MEGA FIGHT TAB */}
                         {activeTab === 'multigc' && (
                             <div className="flex flex-col gap-6">
-                                {/* Connected Sessions Checkbox Picker */}
                                 <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
                                     <div className="flex justify-between items-center mb-3">
                                         <div>
@@ -556,7 +537,6 @@
                                     </div>
                                 </div>
 
-                                {/* Main Account GC Fetcher */}
                                 <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
                                     <h3 className="text-sm font-bold text-red-500 uppercase mb-1">2. Multi-GC Fetcher (Load All GCs)</h3>
                                     <p className="text-xs text-neutral-500 mb-3">Paste Main Account Session ID to fetch all existing group chats.</p>
@@ -567,7 +547,6 @@
                                     {fetchStatus && <p className="mt-3 text-xs font-bold text-emerald-400">{fetchStatus}</p>}
                                 </div>
 
-                                {/* Automated Mass GC Creator */}
                                 <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
                                     <h3 className="text-sm font-bold text-red-500 uppercase mb-1">3. Automated Mass GC Creator (Smart Fallback)</h3>
                                     <p className="text-xs text-neutral-500 mb-4">Creates multiple GCs using selected checked accounts with smart random user fallback.</p>
@@ -588,7 +567,6 @@
                                     <button onClick={startMassGCCreator} className="py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase rounded transition">Start Mass GC Creation</button>
                                 </div>
 
-                                {/* Custom Payload & Target Manager for Mega Fight */}
                                 <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
                                     <h3 className="text-sm font-bold text-red-500 uppercase mb-1">4. Multi-GC Mega Fight Control</h3>
                                     <p className="text-xs text-neutral-500 mb-4">Runs NC and Spam rotation across all fetched GCs with single-GC isolation.</p>
@@ -649,42 +627,21 @@
                                                 if (val === 'Aws users') {
                                                     setSpamPayload(
                                                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
+                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
                                                     );
                                                 }
                                                 else if (val === 'Bada ho') {
                                                     setSpamPayload(
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>"
                                                     );
                                                 }
                                                 else if (val === 'Run') {
                                                     setSpamPayload(
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏"
                                                     );
                                                 }
                                                 else if (val === 'tmkc') {
                                                     setSpamPayload(
-                                                        "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤\n\n\n\n\n\n\n" +
                                                         "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤"
                                                     );
                                                 }
