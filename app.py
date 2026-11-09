@@ -10,11 +10,13 @@ from instagrapi import Client
 
 app = Flask(__name__, static_folder='.')
 
+# Server start timestamp track karne ke liye
+SERVER_START_TIME = time.time()
+
 active_tasks = {}
 task_threads = {}
 logs = []
 
-# Persistent storage file paths
 TASKS_STORE_FILE = "active_tasks_store.json"
 TEMPLATES_STORE_FILE = "templates_store.json"
 
@@ -52,13 +54,10 @@ def generate_random_username():
     suffixes = ["_offical", "_king", "_vip", "", "07", "786"]
     return f"{name_part}{num_part}{random.choice(suffixes)}"
 
-# ================= PERSISTENT STATE SAVER & LOADERS =================
 def save_tasks_to_disk():
-    """Disk par active tasks backup karta hai"""
     try:
         data_to_save = {}
         for tid, tinfo in active_tasks.items():
-            # Thread objects serialize nahi hote, isliye sirf meta data save karenge
             data_to_save[tid] = {k: v for k, v in tinfo.items() if k != 'thread_obj'}
         with open(TASKS_STORE_FILE, 'w') as f:
             json.dump(data_to_save, f, indent=2)
@@ -83,7 +82,6 @@ def save_templates_to_disk():
     except Exception as e:
         print(f"[TEMPLATE SAVE ERROR]: {e}")
 
-# ================= WORKER DISPATCHER FOR AUTO-RESUME =================
 def spawn_task_worker(task_data):
     task_id = task_data['task_id']
     task_type = task_data['type']
@@ -249,7 +247,6 @@ def spawn_task_worker(task_data):
         t.start()
 
 def auto_resume_all_tasks():
-    """Server restart hote hi Disk se sabhi active tasks auto restart karega"""
     load_saved_templates()
     if os.path.exists(TASKS_STORE_FILE):
         try:
@@ -262,10 +259,7 @@ def auto_resume_all_tasks():
         except Exception as e:
             add_log(f"[AUTO-RESUME ERROR]: Failed to resume tasks -> {str(e)}")
 
-# STARTUP AUTO-RESUME TRIGGER
 auto_resume_all_tasks()
-
-# ================= ROUTE HANDLERS =================
 
 @app.route('/ping')
 def ping():
@@ -491,7 +485,12 @@ def stop_task():
 @app.route('/api/tasks/active', methods=['GET'])
 def get_active_tasks():
     tasks_list = list(active_tasks.values())
-    return jsonify({"tasks": tasks_list, "logs": logs})
+    uptime_seconds = int(time.time() - SERVER_START_TIME)
+    return jsonify({
+        "tasks": tasks_list, 
+        "logs": logs,
+        "uptime_seconds": uptime_seconds
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
