@@ -28,6 +28,9 @@
             const [selectedAccountIds, setSelectedAccountIds] = React.useState({});
             const [statusMsg, setStatusMsg] = React.useState(null);
 
+            // Uptime state in seconds
+            const [uptimeSeconds, setUptimeSeconds] = React.useState(0);
+
             const showNotify = (text, type = 'info') => {
                 setStatusMsg({ text, type });
                 setTimeout(() => setStatusMsg(null), 4000);
@@ -67,6 +70,20 @@
 
             const chartInstance = React.useRef(null);
 
+            // Helper to format seconds into DD:HH:MM:SS
+            const formatUptime = (totalSec) => {
+                const days = Math.floor(totalSec / (3600 * 24));
+                const hours = Math.floor((totalSec % (3600 * 24)) / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                const seconds = totalSec % 60;
+                
+                const pad = (n) => String(n).padStart(2, '0');
+                if (days > 0) {
+                    return `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+                }
+                return `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+            };
+
             React.useEffect(() => {
                 if(localStorage.getItem('panel_logged') === 'true') setIsLoggedIn(true);
                 const saved = localStorage.getItem('panel_nodes');
@@ -96,9 +113,19 @@
                     .then(data => {
                         if(data.tasks) setActiveTasks(data.tasks);
                         if(data.logs) setLogs(data.logs);
+                        if(data.uptime_seconds !== undefined) setUptimeSeconds(data.uptime_seconds);
                     }).catch(()=>{});
                 }, 2000);
-                return () => clearInterval(interval);
+
+                // Local 1 second tick for smooth uptime clock
+                const tick = setInterval(() => {
+                    setUptimeSeconds(prev => prev + 1);
+                }, 1000);
+
+                return () => {
+                    clearInterval(interval);
+                    clearInterval(tick);
+                };
             }, [isLoggedIn]);
 
             React.useEffect(() => {
@@ -406,16 +433,30 @@
                             </div>
                         )}
 
-                        <header className="flex justify-between items-center bg-[#111] border border-neutral-900 p-4 rounded-xl">
+                        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#111] border border-neutral-900 p-4 rounded-xl gap-4">
                             <div>
                                 <h2 className="text-sm font-black uppercase tracking-wider text-red-500">{activeTab.toUpperCase()} PANEL</h2>
                                 <p className="text-xs text-neutral-500">Manage automation tasks with Persistent Auto-Resume protection.</p>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs text-neutral-400">Selected ID:</span>
-                                <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded px-2.5 py-1 text-xs text-red-400 font-bold outline-none">
-                                    {nodes.length === 0 ? <option>No Accounts Added</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
-                                </select>
+
+                            {/* Prominent Medium-Sized Live Uptime Badge in Header Corner */}
+                            <div className="flex items-center gap-4">
+                                <div className="bg-black/80 border border-emerald-900/60 px-4 py-2 rounded-xl flex items-center gap-2.5 shadow-lg shadow-emerald-950/40">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">SYSTEM UPTIME</span>
+                                        <span className="text-base font-black font-mono text-emerald-400 tracking-wider">
+                                            {formatUptime(uptimeSeconds)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-neutral-400">Selected ID:</span>
+                                    <select value={selectedNodeId} onChange={e=>setSelectedNodeId(e.target.value)} className="bg-black border border-neutral-800 rounded px-2.5 py-1.5 text-xs text-red-400 font-bold outline-none">
+                                        {nodes.length === 0 ? <option>No Accounts Added</option> : nodes.map(n => <option key={n.id} value={n.id}>@{n.username}</option>)}
+                                    </select>
+                                </div>
                             </div>
                         </header>
 
@@ -432,8 +473,8 @@
                                         <h3 className="text-2xl font-black text-red-500 mt-1">{activeTasks.length}</h3>
                                     </div>
                                     <div className="bg-[#111] border border-neutral-900 p-4 rounded-xl">
-                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Uptime & State</span>
-                                        <h3 className="text-2xl font-black text-emerald-500 mt-1">Auto-Restored</h3>
+                                        <span className="text-neutral-500 text-xs uppercase font-bold">Server Continuous Uptime</span>
+                                        <h3 className="text-xl font-black font-mono text-emerald-400 mt-1">{formatUptime(uptimeSeconds)}</h3>
                                     </div>
                                 </div>
 
