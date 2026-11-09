@@ -25,6 +25,9 @@
             const [inputSessionId, setInputSessionId] = React.useState('');
             const [isVerifying, setIsVerifying] = React.useState(false);
 
+            // Selected accounts checkboxes state for Multi-GC & Swarm
+            const [selectedAccountIds, setSelectedAccountIds] = React.useState({});
+
             const [statusMsg, setStatusMsg] = React.useState(null);
 
             const showNotify = (text, type = 'info') => {
@@ -48,6 +51,20 @@
             const [ncText, setNcText] = React.useState('');
             const [ncJitter, setNcJitter] = React.useState('4.0');
 
+            // Multi-GC & Mass Creator State
+            const [mainFetchSession, setMainFetchSession] = React.useState('');
+            const [fetchStatus, setFetchStatus] = React.useState('');
+            const [fetchedGCThreads, setFetchedGCThreads] = React.useState([]);
+            const [massPrefix, setMassPrefix] = React.useState('MONARCH');
+            const [massAmount, setMassAmount] = React.useState('20');
+            const [massUsernames, setMassUsernames] = React.useState('hater_target_1\nhater_target_2');
+            
+            // Custom Multi-GC Fight Templates State
+            const [globalTargetName, setGlobalTargetName] = React.useState('MONARCH');
+            const [ncBoxText, setNcBoxText] = React.useState('{target} GC LEFT LE RANDIKE {emoji}');
+            const [spamBoxText, setSpamBoxText] = React.useState('{target} GC LEFT LE RANDIBALA {emoji}');
+            const [fightInterval, setFightInterval] = React.useState('300');
+
             // Group Creator State
             const [groupTitle, setGroupTitle] = React.useState('');
             const [groupMembers, setGroupMembers] = React.useState('');
@@ -65,7 +82,13 @@
                     try {
                         const parsed = JSON.parse(saved);
                         setNodes(parsed);
-                        if(parsed.length > 0) setSelectedNodeId(parsed[0].id);
+                        if(parsed.length > 0) {
+                            setSelectedNodeId(parsed[0].id);
+                            // Default select all accounts
+                            const initialSelected = {};
+                            parsed.forEach(n => initialSelected[n.id] = true);
+                            setSelectedAccountIds(initialSelected);
+                        }
                     } catch(e){}
                 }
             }, []);
@@ -118,25 +141,6 @@
                 }
             }, [activeTab, activeTasks]);
 
-            React.useEffect(() => {
-                if(payloadProfile === 'Aws users') {
-                    setSpamPayload(
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
-                    );
-                }
-            }, []);
-
             const handleLogin = (e) => {
                 e.preventDefault();
                 setIsLoggedIn(true);
@@ -157,7 +161,11 @@
                     setIsVerifying(false);
                     if(data.status === 'success') {
                         const newItem = { id: Date.now().toString(), username: data.username, sessionid: data.sessionid };
-                        setNodes(prev => [...prev, newItem]);
+                        setNodes(prev => {
+                            const updated = [...prev, newItem];
+                            return updated;
+                        });
+                        setSelectedAccountIds(prev => ({ ...prev, [newItem.id]: true }));
                         setSelectedNodeId(newItem.id);
                         setInputSessionId('');
                         showNotify(`Connected @${data.username}`, 'success');
@@ -168,6 +176,111 @@
             const removeAccount = (id) => {
                 setNodes(prev => prev.filter(n => n.id !== id));
                 showNotify('Account removed', 'info');
+            };
+
+            const toggleAccountSelection = (id) => {
+                setSelectedAccountIds(prev => ({ ...prev, [id]: !prev[id] }));
+            };
+
+            const toggleSelectAllAccounts = () => {
+                const allSelected = nodes.every(n => selectedAccountIds[n.id]);
+                const newObj = {};
+                nodes.forEach(n => newObj[n.id] = !allSelected);
+                setSelectedAccountIds(newObj);
+            };
+
+            // Multi-GC Fetcher Action
+            const fetchMainGCs = () => {
+                if(!mainFetchSession.trim()) return showNotify('Enter Main Account Session ID!', 'error');
+                setFetchStatus("Fetching GCs from Instagram...");
+                fetch('/api/gcs/fetch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ session_id: mainFetchSession.trim() })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        setFetchedGCThreads(data.gcs.map(g => g.thread_id));
+                        setFetchStatus(`Successfully loaded ${data.count} GCs ready for action!`);
+                        showNotify(`Fetched ${data.count} GCs successfully!`, 'success');
+                    } else {
+                        setFetchStatus(`Error: ${data.message}`);
+                        showNotify(data.message, 'error');
+                    }
+                }).catch(() => { setFetchStatus("Network Error!"); showNotify("Network Error!", 'error'); });
+            };
+
+            // Mass GC Creator Action
+            const startMassGCCreator = () => {
+                const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]).map(n => n.sessionid);
+                if(accountsToUse.length === 0) return showNotify('Select at least one account via checkboxes!', 'error');
+                const usernamesList = massUsernames.split('\n').map(u => u.trim()).filter(u => u);
+
+                fetch('/api/gcs/create_mass', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        accounts: accountsToUse,
+                        usernames: usernamesList,
+                        target_prefix: massPrefix,
+                        amount: parseInt(massAmount) || 20
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') showNotify(data.message, 'success');
+                    else showNotify(data.message, 'error');
+                });
+            };
+
+            // Save NC Templates
+            const saveNCText = () => {
+                fetch('/api/templates/save_nc', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ nc_text: ncBoxText })
+                })
+                .then(res => res.json())
+                .then(data => showNotify(data.message, 'success'));
+            };
+
+            // Save Spam Templates
+            const saveSpamText = () => {
+                fetch('/api/templates/save_spam', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ spam_text: spamBoxText })
+                })
+                .then(res => res.json())
+                .then(data => showNotify(data.message, 'success'));
+            };
+
+            // Start Multi-GC Mega Fight
+            const startMultiFight = () => {
+                const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]).map(n => ({ username: n.username, sessionid: n.sessionid }));
+                if(accountsToUse.length === 0) return showNotify('Select at least one connected session!', 'error');
+                if(fetchedGCThreads.length === 0) return showNotify('Fetch GCs first using the Multi-GC Fetcher!', 'error');
+
+                // Auto save templates first just in case
+                saveNCText();
+                saveSpamText();
+
+                fetch('/api/task/start_multi_fight', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        accounts: accountsToUse,
+                        thread_ids: fetchedGCThreads,
+                        target_name: globalTargetName,
+                        interval: parseInt(fightInterval) || 300
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') showNotify(data.message, 'success');
+                    else showNotify(data.message, 'error');
+                });
             };
 
             const startSpam = () => {
@@ -191,7 +304,8 @@
             };
 
             const startSwarmAttack = () => {
-                if(nodes.length === 0) return showNotify('Link at least one account for Swarm Attack', 'error');
+                const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]);
+                if(accountsToUse.length === 0) return showNotify('Select at least one account for Swarm Attack', 'error');
                 if(!swarmThread || !spamPayload) return showNotify('Fill Thread ID & Payload', 'error');
 
                 fetch('/api/task/start', {
@@ -199,13 +313,13 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         type: 'swarm_spam',
-                        accounts: nodes,
+                        accounts: accountsToUse,
                         thread_id: swarmThread,
                         target: spamTargetName,
                         jitter: swarmJitter,
                         payload: [spamPayload]
                     })
-                }).then(() => showNotify(`🐝 Swarm Attack Deployed across ${nodes.length} accounts!`, 'success'));
+                }).then(() => showNotify(`🐝 Swarm Attack Deployed across ${accountsToUse.length} accounts!`, 'success'));
             };
 
             const startNcLock = () => {
@@ -284,6 +398,7 @@
                             <nav className="flex flex-col gap-1.5">
                                 <button onClick={()=>setActiveTab('dashboard')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='dashboard'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>📊 Dashboard</button>
                                 <button onClick={()=>setActiveTab('accounts')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='accounts'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>👤 Accounts Manager</button>
+                                <button onClick={()=>setActiveTab('multigc')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='multigc'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🔥 Multi-GC Mega Fight</button>
                                 <button onClick={()=>setActiveTab('spam')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='spam'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>⚡ DM Spam Tool</button>
                                 <button onClick={()=>setActiveTab('swarm')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='swarm'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🐝 Swarm Attack</button>
                                 <button onClick={()=>setActiveTab('nclock')} className={`text-left px-3 py-2.5 rounded text-xs font-bold uppercase transition ${activeTab==='nclock'?'bg-red-600 text-white':'text-neutral-400 hover:bg-neutral-900'}`}>🛡️ NC Lock (Title)</button>
@@ -351,7 +466,7 @@
                                                     <div className="text-xs flex items-center gap-3">
                                                         <span className="bg-red-950 text-red-400 font-bold px-2 py-0.5 rounded text-[10px]">{t.type.toUpperCase()}</span>
                                                         <span className="text-neutral-300 font-bold">@{t.username}</span>
-                                                        <span className="text-neutral-500">Thread: {t.thread_id}</span>
+                                                        <span className="text-neutral-500">Thread: {t.thread_id || 'Multi-GC'}</span>
                                                         <span className="text-neutral-600 text-[10px]">({t.started_at})</span>
                                                     </div>
                                                     <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase transition">Terminate</button>
@@ -376,22 +491,133 @@
                                 </div>
 
                                 <div className="border-t border-neutral-900 pt-4">
-                                    <h3 className="text-xs font-bold text-neutral-400 uppercase mb-3">Linked Accounts List ({nodes.length})</h3>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-xs font-bold text-neutral-400 uppercase">Linked Accounts List ({nodes.length})</h3>
+                                        {nodes.length > 0 && (
+                                            <button onClick={toggleSelectAllAccounts} className="text-[10px] bg-neutral-900 hover:bg-neutral-800 text-red-400 px-2.5 py-1 rounded font-bold uppercase">Toggle Select All</button>
+                                        )}
+                                    </div>
                                     {nodes.length === 0 ? (
                                         <p className="text-xs text-neutral-600 italic">No accounts linked yet.</p>
                                     ) : (
-                                        <div className="flex flex-col gap-2">
+                                        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
                                             {nodes.map(n => (
                                                 <div key={n.id} className="flex justify-between items-center bg-black p-3 border border-neutral-900 rounded-lg">
-                                                    <div className="text-xs">
+                                                    <div className="flex items-center gap-3 text-xs">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={!!selectedAccountIds[n.id]} 
+                                                            onChange={() => toggleAccountSelection(n.id)} 
+                                                            className="accent-red-600 cursor-pointer w-4 h-4"
+                                                        />
                                                         <span className="text-red-500 font-bold">@{n.username}</span>
-                                                        <span className="text-neutral-600 ml-2 font-mono text-[10px]">ID: {n.id}</span>
                                                     </div>
                                                     <button onClick={()=>removeAccount(n.id)} className="bg-neutral-900 hover:bg-red-950 text-neutral-400 hover:text-red-500 text-[10px] font-bold px-3 py-1 rounded transition">Remove</button>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* MULTI-GC MEGA FIGHT & CREATOR TAB */}
+                        {activeTab === 'multigc' && (
+                            <div className="flex flex-col gap-6">
+                                {/* Connected Sessions Checkbox Picker */}
+                                <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-red-500 uppercase">1. Connected Sessions Selection</h3>
+                                            <p className="text-xs text-neutral-500">Check IDs to use for Multi-GC Mass Creation & Mega Fight swarm.</p>
+                                        </div>
+                                        {nodes.length > 0 && (
+                                            <button onClick={toggleSelectAllAccounts} className="text-[10px] bg-neutral-900 hover:bg-neutral-800 text-red-400 px-3 py-1.5 rounded font-bold uppercase">Toggle Select All</button>
+                                        )}
+                                    </div>
+                                    <div className="max-h-40 overflow-y-auto border border-neutral-800 rounded p-3 bg-black">
+                                        {nodes.length === 0 ? (
+                                            <p className="text-xs text-neutral-600 italic">No accounts linked yet. Go to Accounts Manager.</p>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                {nodes.map(n => (
+                                                    <label key={n.id} className="flex items-center gap-3 text-xs bg-neutral-950 p-2 rounded cursor-pointer border border-neutral-900">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={!!selectedAccountIds[n.id]} 
+                                                            onChange={() => toggleAccountSelection(n.id)} 
+                                                            className="accent-red-600 w-4 h-4"
+                                                        />
+                                                        <span className="font-bold text-white">@{n.username}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Main Account GC Fetcher */}
+                                <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
+                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">2. Multi-GC Fetcher (Load All GCs)</h3>
+                                    <p className="text-xs text-neutral-500 mb-3">Paste Main Account Session ID to fetch all existing group chats.</p>
+                                    <div className="flex gap-2">
+                                        <input type="text" placeholder="Main Account Session ID..." value={mainFetchSession} onChange={e=>setMainFetchSession(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs flex-1 outline-none text-white"/>
+                                        <button onClick={fetchMainGCs} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-3 rounded transition">Fetch All GCs</button>
+                                    </div>
+                                    {fetchStatus && <p className="mt-3 text-xs font-bold text-emerald-400">{fetchStatus}</p>}
+                                </div>
+
+                                {/* Automated Mass GC Creator */}
+                                <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
+                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">3. Automated Mass GC Creator (Smart Fallback)</h3>
+                                    <p className="text-xs text-neutral-500 mb-4">Creates multiple GCs using selected checked accounts with smart random user fallback.</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="text-[11px] text-neutral-400 mb-1 block">Target Name Prefix</label>
+                                            <input type="text" value={massPrefix} onChange={e=>setMassPrefix(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        </div>
+                                        <div>
+                                            <label className="text-[11px] text-neutral-400 mb-1 block">Total GCs Amount</label>
+                                            <input type="number" value={massAmount} onChange={e=>setMassAmount(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white"/>
+                                        </div>
+                                    </div>
+                                    <div className="mb-4">
+                                        <label className="text-[11px] text-neutral-400 mb-1 block">Base Usernames (One per line)</label>
+                                        <textarea rows="3" value={massUsernames} onChange={e=>setMassUsernames(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white font-mono"></textarea>
+                                    </div>
+                                    <button onClick={startMassGCCreator} className="py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs uppercase rounded transition">Start Mass GC Creation</button>
+                                </div>
+
+                                {/* Custom Payload & Target Manager for Mega Fight */}
+                                <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
+                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">4. Multi-GC Mega Fight Control</h3>
+                                    <p className="text-xs text-neutral-500 mb-4">Runs NC and Spam rotation across all fetched GCs with single-GC isolation.</p>
+                                    
+                                    <div className="mb-4">
+                                        <label className="text-[11px] text-yellow-400 font-bold mb-1 block">Target Name (Replaces &#123;target&#125;)</label>
+                                        <input type="text" value={globalTargetName} onChange={e=>setGlobalTargetName(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs max-w-xs outline-none text-white font-bold"/>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label className="text-[11px] text-emerald-400 font-bold mb-1 block">NC Template (Use &#123;target&#125; & &#123;emoji&#125;)</label>
+                                            <textarea rows="4" value={ncBoxText} onChange={e=>setNcBoxText(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white font-mono mb-2"></textarea>
+                                            <button onClick={saveNCText} className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded">Save NC Text</button>
+                                        </div>
+                                        <div>
+                                            <label className="text-[11px] text-red-400 font-bold mb-1 block">Spam Template (Use &#123;target&#125; & &#123;emoji&#125;)</label>
+                                            <textarea rows="4" value={spamBoxText} onChange={e=>setSpamBoxText(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white font-mono mb-2"></textarea>
+                                            <button onClick={saveSpamText} className="bg-red-700 hover:bg-red-800 text-white text-xs font-bold px-4 py-2 rounded">Save Spam Text</button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 pt-4 border-t border-neutral-800">
+                                        <div>
+                                            <label className="text-[11px] text-neutral-400 mb-1 block">Interval (Seconds)</label>
+                                            <input type="number" value={fightInterval} onChange={e=>setFightInterval(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-32 outline-none text-white"/>
+                                        </div>
+                                        <button onClick={startMultiFight} className="flex-1 py-3.5 bg-red-600 hover:bg-red-700 text-white font-black text-sm uppercase rounded transition tracking-wider shadow-lg">START MULTI-GC MEGA FIGHT 🔥</button>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -420,7 +646,7 @@
                                             onChange={e => {
                                                 const val = e.target.value;
                                                 setPayloadProfile(val);
-                                               if (val === 'Aws users') {
+                                                if (val === 'Aws users') {
                                                     setSpamPayload(
                                                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
                                                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
@@ -433,23 +659,11 @@
                                                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
                                                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
                                                         "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target}  AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
-                                                        "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭\n\n\n\n" +
                                                         "{target} AWS USER LOLIPOP CHUS 🫧☆⊰⊱𑁍ࠬܓ✞🍭"
                                                     );
                                                 }
                                                 else if (val === 'Bada ho') {
                                                     setSpamPayload(
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
-                                                        "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
                                                         "{target}  Lᴜɴᴅ ᴄʜᴜs ᴋᴇ ʙᴀᴅᴀ ʜᴏ 𑁍ࠬܓ<💚>\n\n\n\n" +
@@ -465,22 +679,12 @@
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
-                                                        "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏\n\n\n\n\n\n\n" +
                                                         "{target} 𝘽𝙃𝘼𝙂 𝙈𝘼𝙏"
                                                     );
                                                 }
                                                 else if (val === 'tmkc') {
                                                     setSpamPayload(
-                                                        "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" +
-                                                        "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n" +
+                                                        "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤\n\n\n\n\n\n\n" +
                                                         "{target} ＲＡＮＤＡＬＴＭＫＣ/－🎀⃤"
                                                     );
                                                 }
@@ -537,7 +741,7 @@
                         {activeTab === 'swarm' && (
                             <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl flex flex-col gap-4 max-w-2xl">
                                 <h3 className="text-sm font-bold text-red-500 uppercase">🐝 Account Swarm Attack (Simultaneous Raid)</h3>
-                                <p className="text-xs text-neutral-500">This will launch all your linked accounts ({nodes.length} accounts) simultaneously onto a single target thread!</p>
+                                <p className="text-xs text-neutral-500">This will launch your selected checked accounts simultaneously onto a single target thread!</p>
                                 <div className="flex flex-col gap-3">
                                     <div>
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Target Thread ID</label>
@@ -551,7 +755,7 @@
                                         <label className="text-[11px] text-neutral-400 mb-1 block">Active Payload (Uses current Spam Payload text)</label>
                                         <textarea rows="4" value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs w-full outline-none text-white font-mono"></textarea>
                                     </div>
-                                    <button onClick={startSwarmAttack} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">🚀 Launch Swarm Attack ({nodes.length} Accounts)</button>
+                                    <button onClick={startSwarmAttack} className="py-3 bg-red-600 font-bold text-xs uppercase rounded hover:bg-red-700 transition">🚀 Launch Swarm Attack</button>
                                 </div>
                             </div>
                         )}
