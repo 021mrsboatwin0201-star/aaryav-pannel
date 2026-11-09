@@ -10,7 +10,6 @@ from instagrapi import Client
 
 app = Flask(__name__, static_folder='.')
 
-# Server start timestamp track karne ke liye
 SERVER_START_TIME = time.time()
 
 active_tasks = {}
@@ -25,7 +24,7 @@ cooldown_tracker = {}
 
 saved_nc_templates = []
 saved_spam_templates = []
-EMOJIS_LIST = ["🔥", "⚡", "🔴", "💀", "👑", "☣️", "💥", "⚠️", "🟢", "🔵", "🌪️", "🔱"]
+EMOJIS_LIST = ["💛","🍬","🌸","☄️","💚","💙","💜","🧃","🧊","🥢","☄️","❄️","🍭"]
 
 def add_log(message):
     timestamp = time.strftime("[%H:%M:%S]")
@@ -351,7 +350,7 @@ def create_mass_gcs():
                     continue
 
                 group_title = f"{target_prefix} GC #{created_count + 1} ⚡"
-                thread = cl.direct_create_group(user_ids, group_title)
+                thread = cl.direct_thread_create(user_ids, group_title)
                 created_count += 1
                 add_log(f"[GC CREATED] #{created_count} -> Title: {group_title}")
                 time.sleep(random.uniform(6, 12))
@@ -491,6 +490,22 @@ def get_active_tasks():
         "logs": logs,
         "uptime_seconds": uptime_seconds
     })
+
+@app.route('/api/group/create', methods=['POST'])
+def create_group():
+    data = request.json
+    session_id = data.get('session_id')
+    title = data.get('title')
+    usernames = data.get('usernames', [])
+    try:
+        cl = get_instagrapi_client(session_id)
+        user_ids = [cl.user_id_from_username(u.strip()) for u in usernames if u.strip()]
+        thread = cl.direct_thread_create(user_ids, title)
+        add_log(f"Created Group '{title}' with ID: {thread.id}")
+        return jsonify({"status": "success", "thread_id": thread.id})
+    except Exception as e:
+        add_log(f"Group creation failed: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
