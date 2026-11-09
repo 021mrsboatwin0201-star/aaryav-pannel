@@ -24,7 +24,7 @@ cooldown_tracker = {}
 
 saved_nc_templates = []
 saved_spam_templates = []
-EMOJIS_LIST = ["💛","🍬","🌸","☄️","💚","💙","💜","🧃","🧊","🥢","☄️","❄️","🍭"]
+EMOJIS_LIST = ["🔥", "⚡", "🔴", "💀", "👑", "☣️", "💥", "⚠️", "🟢", "🔵", "🌪️", "🔱"]
 
 def add_log(message):
     timestamp = time.strftime("[%H:%M:%S]")
@@ -326,33 +326,30 @@ def create_mass_gcs():
                 cl = get_instagrapi_client(current_sess)
                 user_ids = []
 
-                if base_usernames and random.random() > 0.3:
-                    target_uname = random.choice(base_usernames).strip()
-                    try:
-                        uid = cl.user_id_from_username(target_uname)
-                        user_ids.append(uid)
-                    except:
-                        pass
-
-                if not user_ids:
-                    for _ in range(5):
-                        rand_uname = generate_random_username()
+                # Tere diye hue usernames se fetch karne ki koshish
+                if base_usernames:
+                    for target_uname in base_usernames:
                         try:
-                            uid = cl.user_id_from_username(rand_uname)
-                            user_ids.append(uid)
-                            break
+                            uid = cl.user_id_from_username(target_uname.strip())
+                            if uid not in user_ids:
+                                user_ids.append(uid)
                         except:
-                            continue
+                            pass
 
-                if not user_ids:
-                    session_idx += 1
-                    time.sleep(2)
-                    continue
+                # STAINLESS SAFEGUARD: Agar 2 se kam users hain (fail hue ya kam diye), toh random fallback se bharo
+                while len(user_ids) < 2:
+                    rand_uname = generate_random_username()
+                    try:
+                        uid = cl.user_id_from_username(rand_uname)
+                        if uid not in user_ids:
+                            user_ids.append(uid)
+                    except:
+                        continue
 
                 group_title = f"{target_prefix} GC #{created_count + 1} ⚡"
                 thread = cl.direct_thread_create(user_ids, group_title)
                 created_count += 1
-                add_log(f"[GC CREATED] #{created_count} -> Title: {group_title}")
+                add_log(f"[GC CREATED] #{created_count} -> Title: {group_title} (Members: {len(user_ids)})")
                 time.sleep(random.uniform(6, 12))
             except Exception as e:
                 add_log(f"[GC CREATION ERROR]: {str(e)}")
@@ -500,6 +497,17 @@ def create_group():
     try:
         cl = get_instagrapi_client(session_id)
         user_ids = [cl.user_id_from_username(u.strip()) for u in usernames if u.strip()]
+        
+        # Manual group creator me bhi minimum 2 recipient check
+        while len(user_ids) < 2:
+            rand_uname = generate_random_username()
+            try:
+                uid = cl.user_id_from_username(rand_uname)
+                if uid not in user_ids:
+                    user_ids.append(uid)
+            except:
+                continue
+
         thread = cl.direct_thread_create(user_ids, title)
         add_log(f"Created Group '{title}' with ID: {thread.id}")
         return jsonify({"status": "success", "thread_id": thread.id})
