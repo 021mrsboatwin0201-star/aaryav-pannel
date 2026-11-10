@@ -28,7 +28,6 @@
             const [selectedAccountIds, setSelectedAccountIds] = React.useState({});
             const [statusMsg, setStatusMsg] = React.useState(null);
 
-            // Uptime state in seconds
             const [uptimeSeconds, setUptimeSeconds] = React.useState(0);
 
             const showNotify = (text, type = 'info') => {
@@ -49,13 +48,12 @@
             const [ncText, setNcText] = React.useState('');
             const [ncJitter, setNcJitter] = React.useState('4.0');
 
-            const [mainFetchSession, setMainFetchSession] = React.useState('');
-            const [fetchStatus, setFetchStatus] = React.useState('');
-            const [fetchedGCThreads, setFetchedGCThreads] = React.useState([]);
+            // Mass GC Creator State
             const [massPrefix, setMassPrefix] = React.useState('MONARCH');
             const [massAmount, setMassAmount] = React.useState('20');
-            const [massUsernames, setMassUsernames] = React.useState('hater_target_1\nhater_target_2');
+            const [massUsernames, setMassUsernames] = React.useState('harmonyistt\naaryavbaap12');
             
+            // Custom Multi-GC Fight Templates State
             const [globalTargetName, setGlobalTargetName] = React.useState('MONARCH');
             const [ncBoxText, setNcBoxText] = React.useState('{target} GC LEFT LE RANDIKE {emoji}');
             const [spamBoxText, setSpamBoxText] = React.useState('{target} GC LEFT LE RANDIBALA {emoji}');
@@ -70,7 +68,6 @@
 
             const chartInstance = React.useRef(null);
 
-            // Helper to format seconds into DD:HH:MM:SS
             const formatUptime = (totalSec) => {
                 const days = Math.floor(totalSec / (3600 * 24));
                 const hours = Math.floor((totalSec % (3600 * 24)) / 3600);
@@ -117,7 +114,6 @@
                     }).catch(()=>{});
                 }, 2000);
 
-                // Local 1 second tick for smooth uptime clock
                 const tick = setInterval(() => {
                     setUptimeSeconds(prev => prev + 1);
                 }, 1000);
@@ -127,37 +123,6 @@
                     clearInterval(tick);
                 };
             }, [isLoggedIn]);
-
-            React.useEffect(() => {
-                if(activeTab === 'analytics') {
-                    const ctx = document.getElementById('statsChart');
-                    if(ctx) {
-                        if(chartInstance.current) chartInstance.current.destroy();
-                        chartInstance.current = new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: ['10m ago', '8m ago', '6m ago', '4m ago', '2m ago', 'Now'],
-                                datasets: [{
-                                    label: 'Messages Sent / min',
-                                    data: [12, 28, 45, 60, 85, activeTasks.length > 0 ? 150 : 10],
-                                    borderColor: '#dc2626',
-                                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                                    fill: true,
-                                    tension: 0.4
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                plugins: { legend: { labels: { color: '#a3a3a3', font: { size: 10 } } } },
-                                scales: {
-                                    x: { ticks: { color: '#737373', font: { size: 10 } }, grid: { color: '#171717' } },
-                                    y: { ticks: { color: '#737373', font: { size: 10 } }, grid: { color: '#171717' } }
-                                }
-                            }
-                        });
-                    }
-                }
-            }, [activeTab, activeTasks]);
 
             const handleLogin = (e) => {
                 e.preventDefault();
@@ -202,27 +167,6 @@
                 const newObj = {};
                 nodes.forEach(n => newObj[n.id] = !allSelected);
                 setSelectedAccountIds(newObj);
-            };
-
-            const fetchMainGCs = () => {
-                if(!mainFetchSession.trim()) return showNotify('Enter Main Account Session ID!', 'error');
-                setFetchStatus("Fetching GCs from Instagram...");
-                fetch('/api/gcs/fetch', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ session_id: mainFetchSession.trim() })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.status === 'success') {
-                        setFetchedGCThreads(data.gcs.map(g => g.thread_id));
-                        setFetchStatus(`Successfully loaded ${data.count} GCs ready for action!`);
-                        showNotify(`Fetched ${data.count} GCs successfully!`, 'success');
-                    } else {
-                        setFetchStatus(`Error: ${data.message}`);
-                        showNotify(data.message, 'error');
-                    }
-                }).catch(() => { setFetchStatus("Network Error!"); showNotify("Network Error!", 'error'); });
             };
 
             const startMassGCCreator = () => {
@@ -270,7 +214,6 @@
             const startMultiFight = () => {
                 const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]).map(n => ({ username: n.username, sessionid: n.sessionid }));
                 if(accountsToUse.length === 0) return showNotify('Select at least one connected session!', 'error');
-                if(fetchedGCThreads.length === 0) return showNotify('Fetch GCs first using the Multi-GC Fetcher!', 'error');
 
                 saveNCText();
                 saveSpamText();
@@ -280,7 +223,6 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         accounts: accountsToUse,
-                        thread_ids: fetchedGCThreads,
                         target_name: globalTargetName,
                         interval: parseInt(fightInterval) || 300
                     })
@@ -439,7 +381,7 @@
                                 <p className="text-xs text-neutral-500">Manage automation tasks with Persistent Auto-Resume protection.</p>
                             </div>
 
-                            {/* Prominent Medium-Sized Live Uptime Badge in Header Corner */}
+                            {/* Prominent Medium-Sized Live Uptime Badge */}
                             <div className="flex items-center gap-4">
                                 <div className="bg-black/80 border border-emerald-900/60 px-4 py-2 rounded-xl flex items-center gap-2.5 shadow-lg shadow-emerald-950/40">
                                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -489,7 +431,7 @@
                                                     <div className="text-xs flex items-center gap-3">
                                                         <span className="bg-red-950 text-red-400 font-bold px-2 py-0.5 rounded text-[10px]">{t.type.toUpperCase()}</span>
                                                         <span className="text-neutral-300 font-bold">@{t.username}</span>
-                                                        <span className="text-neutral-500">Thread: {t.thread_id || 'Multi-GC'}</span>
+                                                        <span className="text-neutral-500">Thread: {t.thread_id || 'Multi-GC Auto'}</span>
                                                         <span className="text-neutral-600 text-[10px]">({t.started_at})</span>
                                                     </div>
                                                     <button onClick={() => stopTask(t.task_id)} className="bg-red-900 hover:bg-red-700 text-white text-[10px] font-bold px-3 py-1.5 rounded uppercase transition">Terminate</button>
@@ -579,17 +521,7 @@
                                 </div>
 
                                 <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
-                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">2. Multi-GC Fetcher (Load All GCs)</h3>
-                                    <p className="text-xs text-neutral-500 mb-3">Paste Main Account Session ID to fetch all existing group chats.</p>
-                                    <div className="flex gap-2">
-                                        <input type="text" placeholder="Main Account Session ID..." value={mainFetchSession} onChange={e=>setMainFetchSession(e.target.value)} className="bg-black border border-neutral-800 rounded p-3 text-xs flex-1 outline-none text-white"/>
-                                        <button onClick={fetchMainGCs} className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-3 rounded transition">Fetch All GCs</button>
-                                    </div>
-                                    {fetchStatus && <p className="mt-3 text-xs font-bold text-emerald-400">{fetchStatus}</p>}
-                                </div>
-
-                                <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
-                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">3. Automated Mass GC Creator (Smart Fallback)</h3>
+                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">2. Automated Mass GC Creator (Smart Safe Delay)</h3>
                                     <p className="text-xs text-neutral-500 mb-4">Creates multiple GCs using selected checked accounts with smart random user fallback.</p>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                         <div>
@@ -609,8 +541,8 @@
                                 </div>
 
                                 <div className="bg-[#111] border border-neutral-900 p-6 rounded-xl">
-                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">4. Multi-GC Mega Fight Control</h3>
-                                    <p className="text-xs text-neutral-500 mb-4">Runs NC and Spam rotation across all fetched GCs with single-GC isolation.</p>
+                                    <h3 className="text-sm font-bold text-red-500 uppercase mb-1">3. Multi-GC Mega Fight Control (Auto-Targeting)</h3>
+                                    <p className="text-xs text-neutral-500 mb-4">Runs NC and Spam rotation across each selected account's own GCs automatically.</p>
                                     
                                     <div className="mb-4">
                                         <label className="text-[11px] text-yellow-400 font-bold mb-1 block">Target Name (Replaces &#123;target&#125;)</label>
