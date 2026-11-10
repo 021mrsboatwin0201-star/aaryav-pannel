@@ -183,15 +183,30 @@ def spawn_task_worker(task_data):
     elif task_type == 'multi_fight':
         u = task_data['username']
         s = task_data['sessionid']
-        tids = task_data['assigned_gcs']
         target_name = task_data.get('target_name', 'MONARCH')
         interval_seconds = int(task_data.get('interval', 300))
 
         def run_multi_worker():
             try:
-                add_log(f"[@{u}] Multi-GC Auto-Resumed with {len(tids)} GCs.")
+                cl = get_instagrapi_client(s)
+                add_log(f"[@{u}] Multi-GC Auto-Resumed. Fetching GCs for this account...")
+                
+                # Fetch GCs specific to THIS account automatically
+                threads = cl.direct_threads(amount=100, selected_filter="group")
+                assigned_gcs = [str(t.id) for t in threads if t.is_group]
+                add_log(f"[@{u}] Found {len(assigned_gcs)} GCs for attack.")
+
                 while task_id in active_tasks:
-                    for thread_id in tids:
+                    if not assigned_gcs:
+                        time.sleep(60)
+                        try:
+                            threads = cl.direct_threads(amount=100, selected_filter="group")
+                            assigned_gcs = [str(t.id) for t in threads if t.is_group]
+                        except:
+                            pass
+                        continue
+
+                    for thread_id in assigned_gcs:
                         if task_id not in active_tasks:
                             break
                         
@@ -203,7 +218,6 @@ def spawn_task_worker(task_data):
                                 del cooldown_tracker[cooldown_key]
 
                         try:
-                            cl = get_instagrapi_client(s)
                             action_type = random.choice(["nc", "spam"])
 
                             if action_type == "nc":
@@ -231,7 +245,7 @@ def spawn_task_worker(task_data):
                             else:
                                 add_log(f"[@{u}] Error on GC {thread_id}: {err_str}")
 
-                        time.sleep(3)
+                        time.sleep(4)
 
                     time.sleep(interval_seconds)
             except Exception as ex:
@@ -306,6 +320,7 @@ def fetch_main_gcs():
         add_log(f"Failed to fetch GCs: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 400
 
+# ================= FIXED MASS GC CREATOR WITH SAFE DELAY =================
 @app.route('/api/gcs/create_mass', methods=['POST'])
 def create_mass_gcs():
     data = request.json
@@ -326,17 +341,15 @@ def create_mass_gcs():
                 cl = get_instagrapi_client(current_sess)
                 user_ids = []
 
-                # Tere diye hue usernames se fetch karne ki koshish
                 if base_usernames:
                     for target_uname in base_usernames:
                         try:
-                            uid = cl.user_id_from_username(target_uname.strip())
+                            uid = cl.user_id_from_username(target_uname.strip().replace('@', ''))
                             if uid not in user_ids:
                                 user_ids.append(uid)
                         except:
                             pass
 
-                # STAINLESS SAFEGUARD: Agar 2 se kam users hain (fail hue ya kam diye), toh random fallback se bharo
                 while len(user_ids) < 2:
                     rand_uname = generate_random_username()
                     try:
@@ -350,15 +363,18 @@ def create_mass_gcs():
                 thread = cl.direct_thread_create(user_ids, group_title)
                 created_count += 1
                 add_log(f"[GC CREATED] #{created_count} -> Title: {group_title} (Members: {len(user_ids)})")
-                time.sleep(random.uniform(6, 12))
+                
+                # SAFE DELAY FIX: 15 to 25 seconds random gap to prevent "Exceeded 30 redirects" / logout
+                safe_delay = random.uniform(15.0, 25.0)
+                time.sleep(safe_delay)
             except Exception as e:
                 add_log(f"[GC CREATION ERROR]: {str(e)}")
-                time.sleep(10)
+                time.sleep(20) # Error aane par lamba cool-down
             session_idx += 1
         add_log(f"Mass GC Creation Completed! Total {total_to_create} GCs created.")
 
     executor.submit(background_mass_creator)
-    return jsonify({"status": "success", "message": f"Started creating {total_to_create} GCs in background."})
+    return jsonify({"status": "success", "message": f"Started creating {total_to_create} GCs safely in background."})
 
 @app.route('/api/templates/save_nc', methods=['POST'])
 def save_nc_text():
@@ -429,35 +445,29 @@ def start_task():
 
     return jsonify({"status": "success"})
 
+# ================= MULTI-FIGHT: AUTO FETCHES GCs PER ACCOUNT =================
 @app.route('/api/task/start_multi_fight', methods=['POST'])
 def start_multi_fight():
     data = request.json
     accounts = data.get('accounts', [])
-    all_gcs = data.get('thread_ids', [])
     target_name = data.get('target_name', 'MONARCH')
     interval_seconds = int(data.get('interval', 300))
     task_id_base = str(int(time.time() * 1000))
 
-    if not accounts or not all_gcs:
-        return jsonify({"status": "error", "message": "Accounts or GCs missing!"}), 400
+    if not accounts:
+        return jsonify({"status": "error", "message": "No accounts selected!"}), 400
 
-    chunk_size = max(1, len(all_gcs) // len(accounts))
+    save_nc_text_internal = data.get('save_nc')
+    save_spam_text_internal = data.get('save_spam')
 
-    for i, acc in enumerate(accounts):
+    for acc in accounts:
         acc_user = acc['username']
         acc_sess = acc['sessionid']
-        start_idx = i * chunk_size
-        end_idx = start_idx + chunk_size if i < len(accounts) - 1 else len(all_gcs)
-        assigned_gcs = all_gcs[start_idx:end_idx]
-
-        if not assigned_gcs:
-            continue
-
         task_id = f"{task_id_base}_{acc_user}"
+        
         task_info = {
             "task_id": task_id, "type": "multi_fight", "username": acc_user,
-            "sessionid": acc_sess, "assigned_gcs": assigned_gcs,
-            "target_name": target_name, "interval": interval_seconds,
+            "sessionid": acc_sess, "target_name": target_name, "interval": interval_seconds,
             "started_at": time.strftime("%H:%M:%S")
         }
 
@@ -465,7 +475,7 @@ def start_multi_fight():
         save_tasks_to_disk()
         spawn_task_worker(task_info)
 
-    return jsonify({"status": "success", "message": f"Multi-GC Mega Fight started across {len(accounts)} accounts!"})
+    return jsonify({"status": "success", "message": f"Multi-GC Mega Fight started across {len(accounts)} accounts (Auto-targeting their GCs)!"})
 
 @app.route('/api/task/stop', methods=['POST'])
 def stop_task():
@@ -496,9 +506,8 @@ def create_group():
     usernames = data.get('usernames', [])
     try:
         cl = get_instagrapi_client(session_id)
-        user_ids = [cl.user_id_from_username(u.strip()) for u in usernames if u.strip()]
+        user_ids = [cl.user_id_from_username(u.strip().replace('@', '')) for u in usernames if u.strip()]
         
-        # Manual group creator me bhi minimum 2 recipient check
         while len(user_ids) < 2:
             rand_uname = generate_random_username()
             try:
