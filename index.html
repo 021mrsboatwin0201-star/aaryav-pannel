@@ -65,15 +65,15 @@
             const [ncJitter, setNcJitter] = React.useState('4.0');
 
             // Mass GC Creator State
-            const [massPrefix, setMassPrefix] = React.useState('MONARCH');
-            const [massAmount, setMassAmount] = React.useState('20');
-            const [massUsernames, setMassUsernames] = React.useState('harmonyistt\naaryavbaap12');
+            const [massPrefix, setMassPrefix] = React.useState('{TARGET}');
+            const [massAmount, setMassAmount] = React.useState('enter valid number');
+            const [massUsernames, setMassUsernames] = React.useState('enter your account name one in a line without @');
             
             // Custom Multi-GC Fight Templates State
-            const [globalTargetName, setGlobalTargetName] = React.useState('MONARCH');
-            const [ncBoxText, setNcBoxText] = React.useState('{target} GC LEFT LE RANDIKE {emoji}');
-            const [spamBoxText, setSpamBoxText] = React.useState('{target} GC LEFT LE RANDIBALA {emoji}');
-            const [fightInterval, setFightInterval] = React.useState('300');
+            const [globalTargetName, setGlobalTargetName] = React.useState('enter target name');
+            const [ncBoxText, setNcBoxText] = React.useState('{target} for target name, {emoji} for better text');
+            const [spamBoxText, setSpamBoxText] = React.useState('{target} for target name{emoji} for better text');
+            const [fightInterval, setFightInterval] = React.useState('enter delay rotation');
 
             const [groupTitle, setGroupTitle] = React.useState('');
             const [groupMembers, setGroupMembers] = React.useState('');
@@ -227,29 +227,6 @@
                 .then(data => showNotify(data.message, 'success'));
             };
 
-            const startMultiFight = () => {
-                const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]).map(n => ({ username: n.username, sessionid: n.sessionid }));
-                if(accountsToUse.length === 0) return showNotify('Select at least one connected session!', 'error');
-
-                saveNCText();
-                saveSpamText();
-
-                fetch('/api/task/start_multi_fight', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        accounts: accountsToUse,
-                        target_name: globalTargetName,
-                        interval: parseInt(fightInterval) || 300
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if(data.status === 'success') showNotify(data.message, 'success');
-                    else showNotify(data.message, 'error');
-                });
-            };
-
             const startSpam = () => {
                 const node = nodes.find(n => n.id === selectedNodeId);
                 if(!node) return showNotify('Select an Account first', 'error');
@@ -302,34 +279,6 @@
                     })
                 }).then(()=>showNotify('NC Lock Worker Enabled!', 'success'));
             };
-
-            const handleCreateGroup = (e) => {
-                e.preventDefault();
-                const node = nodes.find(n => n.id === selectedNodeId);
-                if(!node) return showNotify('Select an Account first', 'error');
-                if(!groupTitle || !groupMembers) return showNotify('Enter Title and Usernames', 'error');
-
-                setIsCreatingGroup(true);
-                fetch('/api/group/create', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        session_id: node.sessionid,
-                        title: groupTitle,
-                        usernames: groupMembers.split('\n')
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    setIsCreatingGroup(false);
-                    if(data.status === 'success') {
-                        showNotify(`Group Created! Thread ID: ${data.thread_id}`, 'success');
-                        setGroupTitle('');
-                        setGroupMembers('');
-                    } else showNotify(data.message, 'error');
-                }).catch(()=>{ setIsCreatingGroup(false); showNotify('Error creating group', 'error'); });
-            };
-
             const stopTask = (tid) => {
                 fetch('/api/task/stop', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -654,7 +603,7 @@
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Target Name</label>
-                                        <input type="text" placeholder="e.g. MONARCH" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600"/>
+                                        <input type="text" placeholder="e.g. TARGET" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600"/>
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Payload Message</label>
@@ -716,7 +665,7 @@
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">NC Title Base Text</label>
-                                        <input type="text" placeholder="e.g. MONARCH SQUAD" value={ncText} onChange={e=>setNcText(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 font-mono"/>
+                                        <input type="text" placeholder="e.g. {TARGET_NAME} BHAG MADARCHOD" value={ncText} onChange={e=>setNcText(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 font-mono"/>
                                     </div>
                                     <button onClick={startNcLock} className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-red-600/20 active:scale-[0.98]">
                                         Enable NC Lock Worker 🛡️
