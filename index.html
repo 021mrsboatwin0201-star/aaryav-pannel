@@ -51,10 +51,11 @@
                 setTimeout(() => setStatusMsg(null), 4000);
             };
 
+            // Saved Payload Profiles & Templates State Restored
             const [spamThread, setSpamThread] = React.useState('');
             const [spamTargetName, setSpamTargetName] = React.useState('');
             const [spamJitter, setSpamJitter] = React.useState('3.5');
-            const [spamPayload, setSpamPayload] = React.useState('');
+            const [spamPayload, setSpamPayload] = React.useState('{target} GC LEFT LE RANDIKE 🔥');
             const [payloadProfile, setPayloadProfile] = React.useState('Aws users');
 
             const [swarmThread, setSwarmThread] = React.useState('');
@@ -65,15 +66,15 @@
             const [ncJitter, setNcJitter] = React.useState('4.0');
 
             // Mass GC Creator State
-            const [massPrefix, setMassPrefix] = React.useState('{TARGET}');
-            const [massAmount, setMassAmount] = React.useState('enter valid number');
-            const [massUsernames, setMassUsernames] = React.useState('enter your account name one in a line without @');
+            const [massPrefix, setMassPrefix] = React.useState('MONARCH');
+            const [massAmount, setMassAmount] = React.useState('20');
+            const [massUsernames, setMassUsernames] = React.useState('harmonyistt\naaryavbaap12');
             
             // Custom Multi-GC Fight Templates State
-            const [globalTargetName, setGlobalTargetName] = React.useState('enter target name');
-            const [ncBoxText, setNcBoxText] = React.useState('{target} for target name, {emoji} for better text');
-            const [spamBoxText, setSpamBoxText] = React.useState('{target} for target name{emoji} for better text');
-            const [fightInterval, setFightInterval] = React.useState('enter delay rotation');
+            const [globalTargetName, setGlobalTargetName] = React.useState('MONARCH');
+            const [ncBoxText, setNcBoxText] = React.useState('{target} GC LEFT LE RANDIKE {emoji}');
+            const [spamBoxText, setSpamBoxText] = React.useState('{target} GC LEFT LE RANDIBALA {emoji}');
+            const [fightInterval, setFightInterval] = React.useState('300');
 
             const [groupTitle, setGroupTitle] = React.useState('');
             const [groupMembers, setGroupMembers] = React.useState('');
@@ -81,8 +82,6 @@
 
             const [activeTasks, setActiveTasks] = React.useState([]);
             const [logs, setLogs] = React.useState([]);
-
-            const chartInstance = React.useRef(null);
 
             const formatUptime = (totalSec) => {
                 const days = Math.floor(totalSec / (3600 * 24));
@@ -227,6 +226,29 @@
                 .then(data => showNotify(data.message, 'success'));
             };
 
+            const startMultiFight = () => {
+                const accountsToUse = nodes.filter(n => selectedAccountIds[n.id]).map(n => ({ username: n.username, sessionid: n.sessionid }));
+                if(accountsToUse.length === 0) return showNotify('Select at least one connected session!', 'error');
+
+                saveNCText();
+                saveSpamText();
+
+                fetch('/api/task/start_multi_fight', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        accounts: accountsToUse,
+                        target_name: globalTargetName,
+                        interval: parseInt(fightInterval) || 300
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') showNotify(data.message, 'success');
+                    else showNotify(data.message, 'error');
+                });
+            };
+
             const startSpam = () => {
                 const node = nodes.find(n => n.id === selectedNodeId);
                 if(!node) return showNotify('Select an Account first', 'error');
@@ -279,6 +301,34 @@
                     })
                 }).then(()=>showNotify('NC Lock Worker Enabled!', 'success'));
             };
+
+            const handleCreateGroup = (e) => {
+                e.preventDefault();
+                const node = nodes.find(n => n.id === selectedNodeId);
+                if(!node) return showNotify('Select an Account first', 'error');
+                if(!groupTitle || !groupMembers) return showNotify('Enter Title and Usernames', 'error');
+
+                setIsCreatingGroup(true);
+                fetch('/api/group/create', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_id: node.sessionid,
+                        title: groupTitle,
+                        usernames: groupMembers.split('\n')
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    setIsCreatingGroup(false);
+                    if(data.status === 'success') {
+                        showNotify(`Group Created! Thread ID: ${data.thread_id}`, 'success');
+                        setGroupTitle('');
+                        setGroupMembers('');
+                    } else showNotify(data.message, 'error');
+                }).catch(()=>{ setIsCreatingGroup(false); showNotify('Error creating group', 'error'); });
+            };
+
             const stopTask = (tid) => {
                 fetch('/api/task/stop', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -332,14 +382,14 @@
 
                             <nav className="flex flex-col gap-1.5">
                                 {[
-                                    { id: 'dashboard', label: '📊 Dashboard', icon: '' },
-                                    { id: 'accounts', label: '👤 Accounts Manager', icon: '' },
-                                    { id: 'multigc', label: '🔥 Multi-GC Mega Fight', icon: '' },
-                                    { id: 'spam', label: '⚡ DM Spam Tool', icon: '' },
-                                    { id: 'swarm', label: '🐝 Swarm Attack', icon: '' },
-                                    { id: 'nclock', label: '🛡️ NC Lock (Title)', icon: '' },
-                                    { id: 'groups', label: '👥 Group Creator', icon: '' },
-                                    { id: 'analytics', label: '📈 Analytics & Charts', icon: '' },
+                                    { id: 'dashboard', label: '📊 Dashboard' },
+                                    { id: 'accounts', label: '👤 Accounts Manager' },
+                                    { id: 'multigc', label: '🔥 Multi-GC Mega Fight' },
+                                    { id: 'spam', label: '⚡ DM Spam Tool' },
+                                    { id: 'swarm', label: '🐝 Swarm Attack' },
+                                    { id: 'nclock', label: '🛡️ NC Lock (Title)' },
+                                    { id: 'groups', label: '👥 Group Creator' },
+                                    { id: 'analytics', label: '📈 Analytics & Charts' },
                                 ].map(tab => (
                                     <button 
                                         key={tab.id}
@@ -378,7 +428,6 @@
                             </div>
 
                             <div className="flex flex-wrap items-center gap-4">
-                                {/* Live Uptime Badge */}
                                 <div className="bg-black/90 border border-emerald-900/50 px-4 py-2.5 rounded-xl flex items-center gap-3 shadow-inner">
                                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                     <div className="flex flex-col">
@@ -403,30 +452,24 @@
                             <div className="flex flex-col gap-6">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="bg-[#0a0a0a] border border-neutral-900 p-5 rounded-2xl relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-red-600/5 rounded-full blur-2xl group-hover:bg-red-600/10 transition"></div>
                                         <span className="text-neutral-500 text-xs uppercase font-bold tracking-wider">Connected Accounts</span>
                                         <h3 className="text-3xl font-black text-white mt-2">{nodes.length}</h3>
                                     </div>
                                     <div className="bg-[#0a0a0a] border border-neutral-900 p-5 rounded-2xl relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-rose-600/5 rounded-full blur-2xl group-hover:bg-rose-600/10 transition"></div>
                                         <span className="text-neutral-500 text-xs uppercase font-bold tracking-wider">Active Processes</span>
                                         <h3 className="text-3xl font-black text-red-500 mt-2">{activeTasks.length}</h3>
                                     </div>
                                     <div className="bg-[#0a0a0a] border border-neutral-900 p-5 rounded-2xl relative overflow-hidden group">
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-600/5 rounded-full blur-2xl group-hover:bg-emerald-600/10 transition"></div>
                                         <span className="text-neutral-500 text-xs uppercase font-bold tracking-wider">System Uptime</span>
                                         <h3 className="text-xl font-black font-mono text-emerald-400 mt-2">{formatUptime(uptimeSeconds)}</h3>
                                     </div>
                                 </div>
 
                                 <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-2xl flex flex-col gap-4 shadow-xl">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                            Live Running Background Processes (Auto-Saved)
-                                        </h3>
-                                        <span className="text-[10px] text-neutral-500 font-mono">Auto-sync active</span>
-                                    </div>
+                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                        Live Running Background Processes (Auto-Saved)
+                                    </h3>
                                     {activeTasks.length === 0 ? (
                                         <div className="py-12 text-center border border-dashed border-neutral-900 rounded-xl">
                                             <p className="text-xs text-neutral-600 italic">No background tasks currently executing.</p>
@@ -434,12 +477,11 @@
                                     ) : (
                                         <div className="flex flex-col gap-2.5">
                                             {activeTasks.map(t => (
-                                                <div key={t.task_id} className="flex justify-between items-center bg-black p-4 border border-neutral-900/80 rounded-xl hover:border-neutral-800 transition">
+                                                <div key={t.task_id} className="flex justify-between items-center bg-black p-4 border border-neutral-900/80 rounded-xl">
                                                     <div className="text-xs flex items-center gap-4">
                                                         <span className="bg-red-950/80 border border-red-900/50 text-red-400 font-bold px-2.5 py-1 rounded-md text-[10px] tracking-wider">{t.type.toUpperCase()}</span>
                                                         <span className="text-white font-bold">@{t.username}</span>
                                                         <span className="text-neutral-400">Thread: <span className="font-mono text-neutral-300">{t.thread_id || 'Multi-GC Auto'}</span></span>
-                                                        <span className="text-neutral-600 text-[10px] font-mono">({t.started_at})</span>
                                                     </div>
                                                     <button onClick={() => stopTask(t.task_id)} className="bg-red-950 hover:bg-red-900 border border-red-900 text-red-200 text-[10px] font-bold px-4 py-2 rounded-lg uppercase tracking-wider transition">Terminate</button>
                                                 </div>
@@ -454,10 +496,7 @@
                         {activeTab === 'accounts' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-2xl flex flex-col gap-5 shadow-xl">
-                                    <div>
-                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Add Instagram Account</h3>
-                                        <p className="text-xs text-neutral-500">Paste your valid sessionid cookie string to initialize node connection.</p>
-                                    </div>
+                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Add Instagram Account</h3>
                                     <form onSubmit={handleAddAccount} className="flex flex-col gap-3">
                                         <textarea rows="3" placeholder="Paste sessionid cookie..." value={inputSessionId} onChange={e=>setInputSessionId(e.target.value)} className="bg-black border border-neutral-800 rounded-xl p-3.5 text-xs w-full outline-none text-white focus:border-red-600 transition font-mono shadow-inner resize-none"/>
                                         <button type="submit" disabled={isVerifying} className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-red-600/20 active:scale-[0.98]">
@@ -474,20 +513,13 @@
                                         )}
                                     </div>
                                     {nodes.length === 0 ? (
-                                        <div className="py-12 text-center border border-dashed border-neutral-900 rounded-xl">
-                                            <p className="text-xs text-neutral-600 italic">No accounts linked in the registry.</p>
-                                        </div>
+                                        <p className="text-xs text-neutral-600 italic">No accounts linked in the registry.</p>
                                     ) : (
                                         <div className="flex flex-col gap-2.5 max-h-72 overflow-y-auto pr-1">
                                             {nodes.map(n => (
                                                 <div key={n.id} className="flex justify-between items-center bg-black p-3.5 border border-neutral-900 rounded-xl">
                                                     <div className="flex items-center gap-3 text-xs">
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={!!selectedAccountIds[n.id]} 
-                                                            onChange={() => toggleAccountSelection(n.id)} 
-                                                            className="accent-red-600 cursor-pointer w-4 h-4 rounded"
-                                                        />
+                                                        <input type="checkbox" checked={!!selectedAccountIds[n.id]} onChange={() => toggleAccountSelection(n.id)} className="accent-red-600 cursor-pointer w-4 h-4 rounded"/>
                                                         <span className="text-white font-bold">@{n.username}</span>
                                                     </div>
                                                     <button onClick={()=>removeAccount(n.id)} className="bg-neutral-900 hover:bg-red-950/60 text-neutral-400 hover:text-red-400 text-[10px] font-bold px-3 py-1.5 rounded-lg border border-neutral-800 transition">Remove</button>
@@ -504,10 +536,7 @@
                             <div className="flex flex-col gap-6">
                                 <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-2xl shadow-xl flex flex-col gap-4">
                                     <div className="flex justify-between items-center">
-                                        <div>
-                                            <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">1. Connected Sessions Selection</h3>
-                                            <p className="text-xs text-neutral-500">Select active nodes to participate in automated Mass GC creation and Mega Fight swarms.</p>
-                                        </div>
+                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">1. Connected Sessions Selection</h3>
                                         {nodes.length > 0 && (
                                             <button onClick={toggleSelectAllAccounts} className="text-[10px] bg-neutral-900 hover:bg-neutral-800 text-red-400 border border-neutral-800 px-3 py-1.5 rounded-lg font-bold uppercase transition">Toggle Select All</button>
                                         )}
@@ -518,12 +547,7 @@
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-48 overflow-y-auto">
                                             {nodes.map(n => (
                                                 <label key={n.id} className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition ${selectedAccountIds[n.id] ? 'bg-red-950/20 border-red-900/50 text-white' : 'bg-black border-neutral-900 text-neutral-400'}`}>
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={!!selectedAccountIds[n.id]} 
-                                                        onChange={() => toggleAccountSelection(n.id)} 
-                                                        className="accent-red-600 w-4 h-4"
-                                                    />
+                                                    <input type="checkbox" checked={!!selectedAccountIds[n.id]} onChange={() => toggleAccountSelection(n.id)} className="accent-red-600 w-4 h-4"/>
                                                     <span className="text-xs font-bold truncate">@{n.username}</span>
                                                 </label>
                                             ))}
@@ -532,7 +556,6 @@
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {/* Mass GC Creator Card */}
                                     <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-2xl shadow-xl flex flex-col gap-4">
                                         <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">2. Mass GC Creator Module</h3>
                                         <div className="flex flex-col gap-3">
@@ -548,49 +571,64 @@
                                                 <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Target Usernames (One per line)</label>
                                                 <textarea rows="3" value={massUsernames} onChange={e=>setMassUsernames(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 resize-none font-mono"/>
                                             </div>
-                                            <button onClick={startMassGCCreator} className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-red-600/20 active:scale-[0.98]">
-                                                Deploy Mass GC Creator 🔥
-                                            </button>
+                                            <button onClick={startMassGCCreator} className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-red-600/20">Deploy Mass GC Creator 🔥</button>
                                         </div>
                                     </div>
 
-                                    {/* Mega Fight Campaign Card */}
                                     <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-2xl shadow-xl flex flex-col gap-4">
-                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">3. Mega Fight Campaign Config</h3>
+                                        <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">3. Mega Fight Campaign Config & Saved Templates</h3>
                                         <div className="flex flex-col gap-3">
                                             <div>
                                                 <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Global Target Name</label>
                                                 <input type="text" value={globalTargetName} onChange={e=>setGlobalTargetName(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600"/>
                                             </div>
                                             <div>
-                                                <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">NC Title Template</label>
+                                                <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">NC Title Template (Saved & Custom)</label>
                                                 <input type="text" value={ncBoxText} onChange={e=>setNcBoxText(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 font-mono"/>
                                             </div>
                                             <div>
-                                                <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Spam Payload Template</label>
+                                                <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Spam Payload Template (Saved & Custom)</label>
                                                 <input type="text" value={spamBoxText} onChange={e=>setSpamBoxText(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 font-mono"/>
                                             </div>
                                             <div>
                                                 <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Interval (Seconds)</label>
                                                 <input type="number" value={fightInterval} onChange={e=>setFightInterval(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600"/>
                                             </div>
-                                            <button onClick={startMultiFight} className="w-full bg-rose-600 hover:bg-rose-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-rose-600/20 active:scale-[0.98]">
-                                                Launch Mega Fight Campaign 🚀
-                                            </button>
+                                            <button onClick={startMultiFight} className="w-full bg-rose-600 hover:bg-rose-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-rose-600/20">Launch Mega Fight Campaign 🚀</button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* DM SPAM TOOL TAB */}
+                        {/* DM SPAM TOOL TAB - WITH RESTORED PROFILES & TEMPLATES */}
                         {activeTab === 'spam' && (
                             <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-2xl shadow-xl max-w-2xl flex flex-col gap-5">
                                 <div>
-                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">Single DM Spam Tool</h3>
-                                    <p className="text-xs text-neutral-500">Execute continuous automated direct message payloads on a specific thread.</p>
+                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">Single DM Spam Tool & Payload Profiles</h3>
+                                    <p className="text-xs text-neutral-500">Select saved profiles or write custom payloads for continuous DM spamming.</p>
                                 </div>
                                 <div className="flex flex-col gap-4">
+                                    {/* Saved Payload Profiles Selection */}
+                                    <div>
+                                        <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Saved Payload Profile</label>
+                                        <select 
+                                            value={payloadProfile} 
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setPayloadProfile(val);
+                                                if(val === 'Aws users') setSpamPayload('{target} GC LEFT LE RANDIKE 🔥');
+                                                else if(val === 'Monarch v1') setSpamPayload('MONARCH SQUAD ON TOP ⚡ {target}');
+                                                else if(val === 'Custom custom') setSpamPayload('');
+                                            }} 
+                                            className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 cursor-pointer"
+                                        >
+                                            <option value="Aws users">Aws users (Default Profile)</option>
+                                            <option value="Monarch v1">Monarch v1 Profile</option>
+                                            <option value="Custom custom">Custom Payload / Custom Profile</option>
+                                        </select>
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Thread ID</label>
@@ -603,10 +641,10 @@
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Target Name</label>
-                                        <input type="text" placeholder="e.g. TARGET" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600"/>
+                                        <input type="text" placeholder="e.g. MONARCH" value={spamTargetName} onChange={e=>setSpamTargetName(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600"/>
                                     </div>
                                     <div>
-                                        <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Payload Message</label>
+                                        <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Payload Text / Custom Message</label>
                                         <textarea rows="3" placeholder="Enter spam message payload..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 resize-none font-mono"/>
                                     </div>
                                     <button onClick={startSpam} className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-red-600/20 active:scale-[0.98]">
@@ -616,12 +654,12 @@
                             </div>
                         )}
 
-                        {/* SWARM ATTACK TAB */}
+                        {/* SWARM ATTACK TAB - WITH PROFILES */}
                         {activeTab === 'swarm' && (
                             <div className="bg-[#0a0a0a] border border-neutral-900 p-6 rounded-2xl shadow-xl max-w-2xl flex flex-col gap-5">
                                 <div>
-                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">Swarm Attack Module</h3>
-                                    <p className="text-xs text-neutral-500">Deploy coordinated spam payloads across all selected connected account nodes simultaneously.</p>
+                                    <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest">Swarm Attack Module & Templates</h3>
+                                    <p className="text-xs text-neutral-500">Deploy coordinated spam payloads across all selected connected account nodes simultaneously using saved profiles.</p>
                                 </div>
                                 <div className="flex flex-col gap-4">
                                     <div className="grid grid-cols-2 gap-3">
@@ -635,7 +673,7 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Payload Message</label>
+                                        <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Payload Message / Profile Template</label>
                                         <textarea rows="3" placeholder="Enter swarm message payload..." value={spamPayload} onChange={e=>setSpamPayload(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 resize-none font-mono"/>
                                     </div>
                                     <button onClick={startSwarmAttack} className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-red-600/20 active:scale-[0.98]">
@@ -665,7 +703,7 @@
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">NC Title Base Text</label>
-                                        <input type="text" placeholder="e.g. {TARGET_NAME} BHAG MADARCHOD" value={ncText} onChange={e=>setNcText(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 font-mono"/>
+                                        <input type="text" placeholder="e.g. MONARCH SQUAD" value={ncText} onChange={e=>setNcText(e.target.value)} className="w-full bg-black border border-neutral-800 rounded-xl p-3 text-xs text-white outline-none focus:border-red-600 font-mono"/>
                                     </div>
                                     <button onClick={startNcLock} className="w-full bg-red-600 hover:bg-red-500 text-white py-3.5 rounded-xl text-xs font-black uppercase tracking-widest transition shadow-lg shadow-red-600/20 active:scale-[0.98]">
                                         Enable NC Lock Worker 🛡️
